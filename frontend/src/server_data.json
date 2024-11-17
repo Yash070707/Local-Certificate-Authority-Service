@@ -1,0 +1,10 @@
+{
+    "admins": [
+      { "email": "admin1@example.com", "password": "adminpass1" },
+      { "email": "admin2@example.com", "password": "adminpass2" }
+    ],
+    "users": [
+      { "email": "user1@example.com", "password": "userpass1" },
+      { "email": "user2@example.com", "password": "userpass2" }
+    ]
+  }
