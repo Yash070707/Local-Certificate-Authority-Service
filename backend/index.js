@@ -11,6 +11,12 @@ app.use(cors());
 // Middleware to parse JSON requests
 app.use(express.json());
 
+
+
+
+
+
+
 // Static files
 app.use(express.static('public'));
 
