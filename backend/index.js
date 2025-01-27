@@ -8,6 +8,11 @@ const PORT = process.env.PORT || 8000;
 // Middleware to handle CORS
 app.use(cors());
 
+
+
+
+
+
 // Middleware to parse JSON requests
 app.use(express.json());
 
