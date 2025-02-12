@@ -9,11 +9,11 @@ const Home = () => {
         <h1>Local Certificate Authority</h1>
         <p>Secure digital certificate management solution</p>
         <div className="cta-buttons">
-          <Link to="/login" className="btn primary">Get Started</Link>
-          <Link to="/login" className="btn secondary">Admin Portal</Link>
+          <Link to="/login" className="btn primary">Login</Link>
+          <Link to="/signup" className="btn secondary">Create Account</Link>
         </div>
       </div>
-      
+
       <div className="features-section">
         <div className="feature-card">
           <h3>For Users</h3>

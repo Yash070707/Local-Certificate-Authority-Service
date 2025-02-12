@@ -1,22 +1,28 @@
-.home-container {
-    text-align: center;
-    padding: 2rem;
-  }
-  
-  .hero-section {
-    padding: 4rem 0;
-    background-color: #f8f9fa;
-  }
-  
-  .features-section {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    padding: 2rem 0;
-  }
-  
-  .feature-card {
-    padding: 1.5rem;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-  }
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.8rem 2rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: transform 0.2s;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.primary {
+  background-color: #2196F3;
+  color: white;
+}
+
+.secondary {
+  background-color: #4CAF50;
+  color: white;
+}
