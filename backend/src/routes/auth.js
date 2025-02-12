@@ -1,10 +1,6 @@
 const express = require('express');
 const { signup, signin } = require('../controllers/authController');
-
-
 const router = express.Router();
-
-
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
 
 router.get('/admin', authenticateToken, authorizeRole('admin'), (req, res) => {
