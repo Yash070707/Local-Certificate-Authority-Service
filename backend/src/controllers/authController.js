@@ -3,7 +3,6 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 JWT_SECRET="abhiyashwani2021"
 
-
 exports.signup = async (req, res) => {
   const { username, password, role = 'client' } = req.body;  // Default role to 'client'
   try {
@@ -20,7 +19,6 @@ exports.signup = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 exports.signin = async (req, res) => {
   const { username, password } = req.body;

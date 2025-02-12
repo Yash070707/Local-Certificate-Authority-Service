@@ -4,7 +4,6 @@ const openssl = require('openssl-nodejs');
 const pool = require('../config/db');
 const { generateCSR } = require('../services/opensslService');
 
-
 exports.createCSR = async (req, res) => {
   try {
     const { commonName, country, state, city, organization, email } = req.body;
@@ -51,10 +50,3 @@ exports.createCSR = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-
-
-
-
-
-
