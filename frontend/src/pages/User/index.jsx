@@ -1,34 +1,51 @@
-import React, { useContext } from 'react';
+import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import CSRForm from '../../components/CSRForm';
-import { AuthContext } from '../../contexts/AuthContext';
-import './Dashboard.css';
+import { submitCSR } from '../../api/certificateApi';
+import './User.css';
 
 const UserDashboard = () => {
-  const { user } = useContext(AuthContext);
+  const { token, user } = useAuth();
+  const [requests, setRequests] = useState([]);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleCSRSubmit = async (csrData) => {
     try {
-      // API call to submit CSR
-      // Show success message and send email
+      const response = await submitCSR(csrData, token);
+      setRequests([...requests, response]);
+      setSuccessMessage('CSR submitted successfully! Check your email for updates.');
+      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
-      // Handle error
+      console.error('CSR submission failed:', error);
     }
   };
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
+    <div className="user-dashboard">
+      <header className="dashboard-header">
         <h1>Welcome, {user?.username}</h1>
-        <p>Certificate Request Portal</p>
-      </div>
-      
+        <p>Certificate Request Management</p>
+      </header>
+
       <div className="dashboard-content">
-        <CSRForm onSubmit={handleCSRSubmit} />
+        {successMessage && <div className="success-banner">{successMessage}</div>}
         
-        <div className="requests-status">
-          <h3>Your Pending Requests</h3>
-          {/* List of pending CSRs */}
-        </div>
+        <section className="csr-section">
+          <h2>New Certificate Request</h2>
+          <CSRForm onSubmit={handleCSRSubmit} />
+        </section>
+
+        <section className="requests-section">
+          <h3>Pending Requests</h3>
+          <div className="requests-list">
+            {requests.map((request, index) => (
+              <div key={index} className="request-item">
+                <span>{request.commonName}</span>
+                <span>{request.status}</span>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );

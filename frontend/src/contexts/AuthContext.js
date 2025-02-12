@@ -1,39 +1,41 @@
-import React, { createContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
+  const [authState, setAuthState] = useState({
+    token: null,
+    role: null,
+    user: null
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const storedRole = localStorage.getItem('role');
-    if(token && storedRole) {
-      setRole(storedRole);
-      setUser(JSON.parse(localStorage.getItem('user')));
+    const role = localStorage.getItem('role');
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    if (token && role) {
+      setAuthState({ token, role, user });
     }
   }, []);
 
-  const login = (token, userData, role) => {
+  const login = (token, user, role) => {
     localStorage.setItem('token', token);
     localStorage.setItem('role', role);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setRole(role);
-    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(user));
+    setAuthState({ token, role, user });
   };
 
   const logout = () => {
     localStorage.clear();
-    setUser(null);
-    setRole(null);
+    setAuthState({ token: null, role: null, user: null });
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, login, logout }}>
+    <AuthContext.Provider value={{ ...authState, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export default AuthContext;
+export const useAuth = () => useContext(AuthContext);
