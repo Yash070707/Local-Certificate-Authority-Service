@@ -6,15 +6,14 @@ const authApi = axios.create({
   timeout: API_TIMEOUT,
 });
 
-export const login = async (credentials, role) => {
-  const response = await authApi.post('/signin', {
-    ...credentials,
-    role
-  });
+// Login function
+export const login = async (credentials) => {
+  const response = await authApi.post('/signin', credentials);
   return response.data;
 };
 
-export const register = async (userData) => {
-  const response = await authApi.post('/signup', userData);
+// Register function
+export const register = async (credentials) => {
+  const response = await authApi.post('/signup', credentials);
   return response.data;
 };

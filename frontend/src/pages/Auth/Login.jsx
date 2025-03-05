@@ -1,52 +1,89 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { login } from '../../api/authApi';
-import RoleSwitch from '../../components/Auth/RoleSwitch';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import './Auth.css';
 
 const Login = () => {
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
-  const [role, setRole] = useState('user');
+  const [credentials, setCredentials] = useState({ 
+    username: '', 
+    password: '' 
+  });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const { login: authLogin } = useAuth();
   const navigate = useNavigate();
+  const { login: contextLogin } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const { token, user } = await login(credentials, role);
-      authLogin(token, user, role);
+      const { token, user, role } = await login(credentials);
+      contextLogin(token, user, role);
       navigate(role === 'admin' ? '/admin' : '/user');
     } catch (err) {
-      setError('Authentication failed. Please check your credentials.');
+      setError('Invalid username or password');
     }
+  };
+
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
-        <h2>{role.charAt(0).toUpperCase() + role.slice(1)} Login</h2>
-        <RoleSwitch role={role} setRole={setRole} />
+      <div className="auth-content">
+        <h1 className="auth-title">Certificate Authority Login</h1>
         
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Username"
-            value={credentials.username}
-            onChange={(e) => setCredentials({...credentials, username: e.target.value})}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={credentials.password}
-            onChange={(e) => setCredentials({...credentials, password: e.target.value})}
-            required
-          />
-          <button type="submit" className="submit-btn">Sign In</button>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label>Username</label>
+            <input
+              type="text"
+              value={credentials.username}
+              onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Password</label>
+            <div className="password-input-container">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={credentials.password}
+                onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={handleClickShowPassword}
+                aria-label="toggle password visibility"
+              >
+                {showPassword ? (
+                <Visibility className="eye-icon" />
+              ) : (
+                <VisibilityOff className="eye-icon" />
+              )}
+              </button>
+            </div>
+          </div>
+
           {error && <div className="error-message">{error}</div>}
+
+          <button type="submit" className="submit-btn">
+            Sign In
+          </button>
         </form>
+
+        <p className="auth-redirect">
+          Don't have an account?{' '}
+          <Link to="/signup" className="auth-link">
+            Create Account
+          </Link>
+        </p>
       </div>
     </div>
   );
