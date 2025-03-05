@@ -4,6 +4,11 @@ const bodyParser = require('body-parser');
 const certificateRoutes = require('./routes/certificates');
 require('dotenv').config();
 
+
+console.log("DB User:", process.env.DB_USER); // Debugging
+console.log("DB Password:", process.env.DB_PASSWORD);
+
+
 const app = express();
 app.use(bodyParser.json());
 app.use(express.json());
