@@ -54,9 +54,12 @@ const Signup = () => {
       return;
     }
     try {
-      const { token, user, role } = await register(credentials);
-      contextLogin(token, user, role);
-      navigate(role === 'admin' ? '/admin' : '/user');
+      const { userId, role } = await register({
+        username: credentials.username,
+        password: credentials.password
+      });
+      contextLogin(null, { id: userId, username: credentials.username }, role);
+      navigate(role === 'admin' ? '/admin' : '/user');      
     } catch (err) {
       setError('Registration failed. Username might be taken.');
     }

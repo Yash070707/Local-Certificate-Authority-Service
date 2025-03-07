@@ -18,14 +18,20 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(''); // Clear previous errors
+  
     try {
-      const { token, user, role } = await login(credentials);
-      contextLogin(token, user, role);
+      const { userId, role } = await login({
+        username: credentials.username,
+        password: credentials.password,
+      });
+  
+      contextLogin(null, { id: userId, username: credentials.username }, role);
       navigate(role === 'admin' ? '/admin' : '/user');
     } catch (err) {
       setError('Invalid username or password');
     }
-  };
+  };  
 
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);

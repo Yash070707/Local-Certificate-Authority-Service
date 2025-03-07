@@ -7,13 +7,17 @@ const authApi = axios.create({
 });
 
 // Login function
-export const login = async (credentials) => {
-  const response = await authApi.post('/signin', credentials);
+export const login = async ({ username, password }) => {
+  const response = await authApi.post('http://localhost:5000/api/auth/signin', { username, password });
+  console.log(response.data);
   return response.data;
 };
 
-// Register function
-export const register = async (credentials) => {
-  const response = await authApi.post('/signup', credentials);
+// Sign-up function
+export const register = async ({ username, password }) => {
+  const response = await authApi.post('http://localhost:5000/api/auth/signup', { username, password },  {
+    withCredentials: true
+  });
+  console.log(response.data);
   return response.data;
 };
