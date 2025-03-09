@@ -69,12 +69,19 @@ const Login = () => {
                 aria-label="toggle password visibility"
               >
                 {showPassword ? (
-                <Visibility className="eye-icon" />
-              ) : (
-                <VisibilityOff className="eye-icon" />
-              )}
+                  <Visibility className="eye-icon" />
+                ) : (
+                  <VisibilityOff className="eye-icon" />
+                )}
               </button>
             </div>
+          </div>
+
+          {/* Forgot Password Link */}
+          <div className="forgot-password">
+            <Link to="/forgot-password" className="forgot-password-link">
+              Forgot Password?
+            </Link>
           </div>
 
           {error && <div className="error-message">{error}</div>}

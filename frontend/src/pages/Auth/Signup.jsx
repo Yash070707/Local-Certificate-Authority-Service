@@ -55,15 +55,15 @@ const Signup = () => {
       return;
     }
     try {
-      const { userId, role } = await register({
+      const { email } = await register({
         username: credentials.username,
         email: credentials.email,
         password: credentials.password
       });
-      contextLogin(null, { id: userId, username: credentials.username }, role);
-      navigate(role === 'admin' ? '/admin' : '/user');      
+
+      navigate('/verify-otp', { state: { email } });  // Redirect to OTP page
     } catch (err) {
-      setError('Registration failed. Username might be taken.');
+      setError('Registration failed. Username or email might be taken.');
     }
   };
 
