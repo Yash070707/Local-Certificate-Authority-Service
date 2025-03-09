@@ -57,7 +57,7 @@ const UserDashboard = () => {
 
         <section id="analytics" className="analytics-section">
           <h3>Analytics</h3>
-          {/* Add analytics content here */}
+          {/* Add analytics */}
         </section>
       </div>
     </div>
