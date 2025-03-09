@@ -21,12 +21,12 @@ const Login = () => {
     setError(''); // Clear previous errors
   
     try {
-      const { userId, role } = await login({
+      const { token, userId, role } = await login({
         username: credentials.username,
         password: credentials.password,
       });
   
-      contextLogin(null, { id: userId, username: credentials.username }, role);
+      contextLogin(token, { id: userId, username: credentials.username }, role);
       navigate(role === 'admin' ? '/admin' : '/user');
     } catch (err) {
       setError('Invalid username or password');
