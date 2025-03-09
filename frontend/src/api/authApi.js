@@ -9,6 +9,7 @@ const authApi = axios.create({
 // Login function
 export const login = async ({ username, password }) => {
   const response = await authApi.post('http://localhost:5000/api/auth/signin', { username, password });
+  console.log(response);
   return response.data;
 };
 

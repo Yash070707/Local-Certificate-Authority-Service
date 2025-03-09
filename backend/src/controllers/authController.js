@@ -8,10 +8,10 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 const generateOTP = () => {
   return otpGenerator.generate(6, {
-    upperCase: false,
-    specialChars: false,
-    alphabets: false,
-    digits: true
+    upperCaseAlphabets: false, // This disables uppercase letters
+    lowerCaseAlphabets: false, // This disables lowercase letters
+    specialChars: false,       // This disables special characters
+    digits: true               // This enables only digits
   });
 };
 
