@@ -11,6 +11,7 @@ import './Auth.css';
 const Signup = () => {
   const [credentials, setCredentials] = useState({ 
     username: '', 
+    email: '',
     password: '',
     confirmPassword: ''
   });
@@ -56,6 +57,7 @@ const Signup = () => {
     try {
       const { userId, role } = await register({
         username: credentials.username,
+        email: credentials.email,
         password: credentials.password
       });
       contextLogin(null, { id: userId, username: credentials.username }, role);
@@ -77,6 +79,16 @@ const Signup = () => {
               type="text"
               value={credentials.username}
               onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Email</label>
+            <input
+              type="email"
+              value={credentials.email}
+              onChange={(e) => setCredentials({...credentials, email: e.target.value})}
               required
             />
           </div>
