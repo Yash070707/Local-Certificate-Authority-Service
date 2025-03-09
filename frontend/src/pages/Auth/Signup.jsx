@@ -55,13 +55,13 @@ const Signup = () => {
       return;
     }
     try {
-      const { email } = await register({
+      await register({
         username: credentials.username,
         email: credentials.email,
         password: credentials.password
       });
 
-      navigate('/verify-otp', { state: { email } });  // Redirect to OTP page
+      navigate('/verify-otp', { state: { email: credentials.email } });  // Redirect to OTP page
     } catch (err) {
       setError('Registration failed. Username or email might be taken.');
     }

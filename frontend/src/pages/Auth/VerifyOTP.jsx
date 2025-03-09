@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { verifyOtp } from '../../api/authApi';
 import './Auth.css';
@@ -10,6 +10,12 @@ const VerifyOtp = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const email = location.state?.email || '';
+
+  useEffect(() => {
+    if (!email) {
+      navigate('/signup');
+    }
+  }, [email, navigate]);
 
   const handleVerify = async (e) => {
     e.preventDefault();
