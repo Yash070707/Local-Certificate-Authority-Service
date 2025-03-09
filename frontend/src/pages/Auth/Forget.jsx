@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { forgotPassword } from "../../api/authApi"; // You need to implement this API call
+import { forgotPassword } from "../../api/authApi";
 import "./Password.css";
 
 const Forget = () => {
@@ -15,9 +15,11 @@ const Forget = () => {
     setError("");
 
     try {
-      await forgotPassword(email);
+      // Pass email as an object with email property
+      await forgotPassword({ email });
       setMessage("A password reset link has been sent to your email.");
     } catch (err) {
+      console.error("Error details:", err);
       setError("Failed to send reset email. Please try again.");
     }
   };

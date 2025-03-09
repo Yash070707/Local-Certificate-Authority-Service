@@ -20,12 +20,43 @@ const sendOTPEmail = async (email, otp, purpose) => {
     to: email,
     subject: subjectMap[purpose],
     html: `
-      <h1>${purpose === 'signup' ? 'Welcome to Our Service!' : 'Password Reset Request'}</h1>
-      <p>Your OTP for ${purpose === 'signup' ? 'email verification' : 'password reset'} is: <strong>${otp}</strong></p>
-      <p>This OTP will expire in 10 minutes.</p>
-      <p>If you didn't request this, please ignore this email.</p>
+      <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="https://i.imgur.com/RkL1FrV.png" alt="Company Logo" style="max-width: 150px; border-radius: 5px;">
+        </div>
+        <div style="background-color: #ffffff; padding: 20px; border-radius: 10px;">
+          <h2 style="color: #333333; text-align: center; font-size: 24px; margin-bottom: 10px;">
+            ${purpose === 'signup' ? 'Welcome to Our Service!' : 'Password Reset Request'}
+          </h2>
+          <p style="font-size: 16px; color: #555555; text-align: center; margin-bottom: 20px;">
+            Your ${purpose === 'signup' ? 'email verification' : 'password reset'} OTP is:
+          </p>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <span style="font-size: 28px; font-weight: bold; color: #4CAF50; background-color: #f0f0f0; padding: 10px 20px; border-radius: 5px; letter-spacing: 3px;">
+              ${otp}
+            </span>
+          </div>
+          <p style="font-size: 14px; color: #777777; text-align: center; margin-bottom: 10px;">
+            This OTP will expire in <strong>10 minutes</strong>.
+          </p>
+          <p style="font-size: 14px; color: #777777; text-align: center; margin-bottom: 20px;">
+            If you did not request this, please ignore this email.
+          </p>
+          <div style="text-align: center; margin-top: 20px;">
+            <a href="#" style="text-decoration: none; background-color: #4CAF50; color: white; padding: 10px 30px; border-radius: 5px; font-size: 16px;">
+              Verify Now
+            </a>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 20px;">
+          <p style="font-size: 12px; color: #999999;">
+            © ${new Date().getFullYear()} Your Company Name. All rights reserved.
+          </p>
+        </div>
+      </div>
     `
   };
+  
 
   try {
     await transporter.sendMail(mailOptions);
