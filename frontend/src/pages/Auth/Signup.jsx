@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+//import { useAuth } from '../../contexts/AuthContext';
 import { register } from '../../api/authApi';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
@@ -25,7 +25,7 @@ const Signup = () => {
     hasSpecial: false,
   });
   const navigate = useNavigate();
-  const { login: contextLogin } = useAuth();
+  //const { login: contextLogin } = useAuth();
 
   const passwordRequirements = [
     { id: 'minLength', text: 'Minimum 8 characters' },
@@ -39,13 +39,14 @@ const Signup = () => {
       minLength: credentials.password.length >= 8,
       hasUpper: /[A-Z]/.test(credentials.password),
       hasNumber: /\d/.test(credentials.password),
-      hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(credentials.password),
+      hasSpecial: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(credentials.password),
     };
     setPasswordValidations(validations);
   }, [credentials.password]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     if (credentials.password !== credentials.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -55,15 +56,25 @@ const Signup = () => {
       return;
     }
     try {
-      await register({
+      console.log('Attempting registration...');
+      const response = await register({
         username: credentials.username,
         email: credentials.email,
         password: credentials.password
       });
-
-      navigate('/verify-otp', { state: { email: credentials.email } });  // Redirect to OTP page
+      console.log('Registration successful:', response);
+      
+      // Check if we have a response before navigating
+      if (response) {
+        console.log('Navigating to verify-otp with email:', credentials.email);
+        navigate('/verify-otp', { 
+          state: { email: credentials.email },
+          replace: true  // This ensures we replace the current route
+        });
+      }
     } catch (err) {
-      setError('Registration failed. Username or email might be taken.');
+      console.error('Registration error:', err);
+      setError(err.response?.data?.error || err.message || 'Registration failed. Username or email might be taken.');
     }
   };
 

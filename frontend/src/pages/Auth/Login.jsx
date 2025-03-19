@@ -27,9 +27,14 @@ const Login = () => {
       });
   
       contextLogin(token, { id: userId, username: credentials.username }, role);
-      navigate(role === 'admin' ? '/admin' : '/user');
+      console.log(`Login successful for ${credentials.username} for role ${role}`);
+      if (role === "client") {
+        navigate('/user');
+      } else {
+        navigate('/admin');
+      }
     } catch (err) {
-      setError('Invalid username or password');
+      setError(err.message || 'Invalid username or password');
     }
   };  
 

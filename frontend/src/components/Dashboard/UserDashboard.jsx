@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import CSRForm from '../../components/CSRForm';
 import { submitCSR } from '../../api/certificateApi';
+import { Link } from 'react-router-dom';
 import './UserDashboard.css';
 
 const UserDashboard = () => {
@@ -24,7 +25,7 @@ const UserDashboard = () => {
     <div className="user-dashboard">
       <nav className="navbar">
         <ul>
-          <li><a href="#generate-csr">Generate CSR</a></li>
+          <li><Link to="/generate-csr">Generate CSR</Link></li>
           <li><a href="#user-dashboard">User Dashboard</a></li>
           <li><a href="#analytics">Analytics</a></li>
         </ul>

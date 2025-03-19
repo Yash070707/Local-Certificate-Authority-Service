@@ -1,22 +1,24 @@
 .admin-dashboard {
     padding: 2rem;
-  }
-  
-  .requests-grid, .certificates-grid {
+}
+
+.requests-grid,
+.certificates-grid {
     display: grid;
     gap: 1rem;
     margin-top: 1rem;
-  }
-  
-  .request-card, .certificate-card {
+}
+
+.request-card,
+.certificate-card {
     padding: 1rem;
     border: 1px solid #ddd;
     border-radius: 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-  }
-  
-  .request-actions button {
+}
+
+.request-actions button {
     margin-left: 0.5rem;
-  }
+}

@@ -33,7 +33,7 @@ const VerifyOtp = () => {
         setError(response.message || 'Invalid OTP. Please try again.');
       }
     } catch (err) {
-      setError('Error verifying OTP. Please try again.');
+      setError(err.message || 'Error verifying OTP. Please try again.');
     }
   };
 
