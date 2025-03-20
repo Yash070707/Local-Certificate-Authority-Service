@@ -5,7 +5,6 @@ const cors = require('cors');
 const certificateRoutes = require('./routes/certificates');
 require('dotenv').config();
 
-
 const app = express();
 app.use(bodyParser.json());
 app.use(express.json());
