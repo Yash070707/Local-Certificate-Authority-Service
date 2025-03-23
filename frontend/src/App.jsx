@@ -8,7 +8,8 @@ import VerifyOTP from './pages/Auth/VerifyOTP';
 import UserDashboard from './pages/User';
 import AdminDashboard from './pages/Admin';
 import ProtectedRoute from './components/ProtectedRoute';
-import GenerateCSR from './pages/GenerateCSR';
+import GenerateCSR from './components/CSRForm/GenerateCSR';
+
 
 const App = () => {
   return (
