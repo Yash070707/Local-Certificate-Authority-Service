@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
-//import { useNavigate } from "react-router-dom";
-import { generateCSR, downloadFile } from "../../api/certificateApi"; // Correct import path
+import forge from "node-forge"; // Import forge for CSR generation
+import { generateCSR } from "../../api/certificateApi"; // Corrected API import
 import "./GenerateCSR.css";
 
 const GenerateCSR = () => {
-//  //const navigate = useNavigate();
   const [countries, setCountries] = useState([]);
   const [formData, setFormData] = useState({
     domain: "",
@@ -17,8 +16,10 @@ const GenerateCSR = () => {
     rootLength: "2048",
     signatureAlgorithm: "SHA-2",
   });
-  const [csrFile, setCsrFile] = useState(null);
-  const [privateKeyFile, setPrivateKeyFile] = useState(null);
+
+  const [csr, setCsr] = useState(null);
+  const [privateKey, setPrivateKey] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetch("https://restcountries.com/v3.1/all")
@@ -41,38 +42,39 @@ const GenerateCSR = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
-    // Get the logged-in username from localStorage
-    const username = localStorage.getItem('username');
+    setLoading(true);
 
-    // Append username to form data
-    const formDataWithUser = { ...formData, username };
+    try {
+      const response = await generateCSR(formData);
 
-    const response = await generateCSR(formDataWithUser);
-    if (response.success) {
-      alert("CSR generated successfully!");
-      
-      // Set the CSR and Private Key file names for download
-      setCsrFile(response.csrFile);
-      setPrivateKeyFile(response.privateKeyFile);
-    } else {
-      alert("Failed to generate CSR. Please try again.");
+      if (response.success) {
+        alert("CSR generated successfully! You can download it now.");
+        setCsr(response.csr);
+        setPrivateKey(response.privateKey);
+      } else {
+        alert(`CSR generation failed: ${response.message}`);
+      }
+    } catch (error) {
+      alert("An error occurred while generating CSR.");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDownload = (fileName) => {
-    downloadFile(fileName);
+  const downloadFile = (filename, content) => {
+    const blob = new Blob([content], { type: "text/plain" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
     <div className="container">
       <div className="form-container">
-        {csrFile && (
-          <div className="download-buttons">
-            <button onClick={() => handleDownload(csrFile)} className="download-btn">Download CSR</button>
-            <button onClick={() => handleDownload(privateKeyFile)} className="download-btn">Download Private Key</button>
-          </div>
-        )}
         <h1>Generate CSR</h1>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -125,15 +127,21 @@ const GenerateCSR = () => {
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Signature Algorithm:</label>
-            <select name="signatureAlgorithm" value={formData.signatureAlgorithm} onChange={handleChange} required>
-              <option value="SHA-2">SHA-2</option>
-            </select>
-          </div>
-
-          <button type="submit" className="generate-btn">Generate CSR</button>
+          <button type="submit" className="generate-btn" disabled={loading}>
+            {loading ? "Generating..." : "Generate CSR"}
+          </button>
         </form>
+
+        {csr && (
+          <div className="download-buttons">
+            <button onClick={() => downloadFile("user-csr.csr", csr)} className="download-btn">
+              Download CSR
+            </button>
+            <button onClick={() => downloadFile("user-private.key", privateKey)} className="download-btn">
+              Download Private Key
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

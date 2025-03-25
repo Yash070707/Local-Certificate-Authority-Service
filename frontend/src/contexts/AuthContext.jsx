@@ -20,11 +20,21 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (token, user, role) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('role', role);
-    localStorage.setItem('user', JSON.stringify(user));
+    console.log("Saving token:", token);  // Debugging log
+    console.log("Saving username:", user?.username); // Debugging log
+
+    if (!token || !user?.username) {
+        console.error("Login failed: Missing token or username");
+        return;
+    }
+
+    localStorage.setItem("token", token);
+    localStorage.setItem("role", role);
+    localStorage.setItem("username", user.username);
+    localStorage.setItem("user", JSON.stringify(user));
     setAuthState({ token, role, user });
-  };
+};
+
 
   const logout = () => {
     localStorage.clear();

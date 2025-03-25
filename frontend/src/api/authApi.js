@@ -10,8 +10,12 @@ const authApi = axios.create({
 // Login function
 export const login = async ({ username, password }) => {
   const response = await authApi.post('/signin', { username, password });
+
+  console.log("Login response:", response.data);  // Debugging
+
   return response.data;
 };
+
 
 // Sign-up function
 export const register = async ({ username, email, password }) => {
