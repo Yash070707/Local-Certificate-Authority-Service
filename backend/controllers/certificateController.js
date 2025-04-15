@@ -66,6 +66,8 @@ exports.generateCSR = async (req, res) => {
           csrFile: `${domain}.csr`,
           csr: csrContent
         });
+        console.log(csrContent);
+        console.log(`${domain}.csr`);
 
       } catch (readError) {
         console.error("Error reading CSR:", readError);
