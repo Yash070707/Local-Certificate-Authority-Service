@@ -1,9 +1,12 @@
-const express = require('express');
-const { getUserCertificates } = require('../controllers/dashboardController');
-
+const express = require("express");
 const router = express.Router();
+const { authenticateToken, authorizeAdmin } = require("../middleware/auth");
+const {
+  getAdminDashboard,
+  getUserDashboard,
+} = require("../controllers/dashboardController");
 
-// Route to fetch user certificates
-router.get('/UserCertificates', getUserCertificates);
+router.get("/admin", authenticateToken, authorizeAdmin, getAdminDashboard);
+router.get("/user", authenticateToken, getUserDashboard);
 
 module.exports = router;

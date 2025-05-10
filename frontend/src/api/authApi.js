@@ -1,36 +1,74 @@
-import axios from 'axios';
-import { API_BASE_URL, API_TIMEOUT } from './apiConfig';
+import axios from "axios";
+import { API_BASE_URL, API_TIMEOUT } from "./apiConfig";
 
 const authApi = axios.create({
   baseURL: `${API_BASE_URL}/auth`,
-  timeout: API_TIMEOUT,  // Increasing timeout to 30 seconds
-  withCredentials: true
+  timeout: API_TIMEOUT,
+  withCredentials: true,
 });
 
-// Login function
 export const login = async ({ username, password }) => {
-  const response = await authApi.post('/signin', { username, password });
-
-  console.log("Login response:", response.data);  // Debugging
-
-  return response.data;
+  try {
+    const response = await authApi.post("/signin", {
+      username: username.trim(),
+      password: password.trim(),
+    });
+    console.log("Login response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Login error:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+    throw new Error(error.response?.data?.message || "Signin failed");
+  }
 };
 
-
-// Sign-up function
 export const register = async ({ username, email, password }) => {
-  const response = await authApi.post('/signup', { username, email, password });
-  return response.data;
+  try {
+    const response = await authApi.post("/signup", {
+      username,
+      email,
+      password,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Register error:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+    throw new Error(error.response?.data?.message || "Signup failed");
+  }
 };
 
-// OTP verification function
 export const verifyOtp = async ({ email, otp }) => {
-  const response = await authApi.post('/verify-email', { email, otp });
-  return response.data;
+  try {
+    const response = await authApi.post("/verify-email", { email, otp });
+    return response.data;
+  } catch (error) {
+    console.error("OTP verification error:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+    throw new Error(error.response?.data?.message || "OTP verification failed");
+  }
 };
 
-// Forgot password function
 export const forgotPassword = async ({ email }) => {
-  const response = await authApi.post('/forgot-password', { email });
-  return response.data;
+  try {
+    const response = await authApi.post("/forgot-password", { email });
+    return response.data;
+  } catch (error) {
+    console.error("Forgot password error:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+    throw new Error(
+      error.response?.data?.message || "Forgot password request failed"
+    );
+  }
 };

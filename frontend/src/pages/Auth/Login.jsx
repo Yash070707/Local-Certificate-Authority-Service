@@ -1,5 +1,7 @@
+
+
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { login } from '../../api/authApi';
 import Visibility from '@mui/icons-material/Visibility';
@@ -14,29 +16,32 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const { login: contextLogin } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(''); // Clear previous errors
-  
     try {
-      const { token, userId, role } = await login({
-        username: credentials.username,
-        password: credentials.password,
+      const response = await login({ 
+        username: credentials.username, 
+        password: credentials.password 
       });
-  
-      contextLogin(token, { id: userId, username: credentials.username }, role);
-      console.log(`Login successful for ${credentials.username} for role ${role}`);
-      if (role === "client") {
-        navigate('/user');
+      
+      if (response && response.token && response.user) {
+        contextLogin(response);
+        
+        // Redirect to the intended route (from state) or based on role
+        const redirectTo = location.state?.from?.pathname || 
+                          (response.user.role === 'admin' ? '/admin' : '/user');
+        navigate(redirectTo, { replace: true });
       } else {
-        navigate('/admin');
+        throw new Error('Invalid response from server');
       }
-    } catch (err) {
-      setError(err.message || 'Invalid username or password');
+    } catch (error) {
+      console.error('Login error:', error);
+      setError(error.message || 'Login failed');
     }
-  };  
+  };
 
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
@@ -82,7 +87,6 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Forgot Password Link */}
           <div className="forgot-password">
             <Link to="/forgot-password" className="forgot-password-link">
               Forgot Password?

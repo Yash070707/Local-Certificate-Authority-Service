@@ -1,38 +1,38 @@
-const pool = require('../config/db');
+const pool = require("../config/db");
 
-// Controller to fetch all certificates for a user
-const getUserCertificates = async (req, res) => {
-    try {
-        // Extract the username from the request (e.g., from req.query or req.user)
-        const username = req.query.username; // Assuming username is sent as a query parameter
-
-        if (!username) {
-            return res.status(400).json({ error: 'Username is required' });
-        }
-
-        // Query to fetch certificates from the csr_requests table
-        const query = `
-            SELECT 
-                csr_requests.domain AS "Domain Name",
-                csr_requests.created_at AS "Issue Date",
-                csr_requests.created_at + interval '1 year' AS "Expiry Date",
-                'Active' AS "Status" -- You can adjust the status logic as needed
-            FROM csr_requests
-            INNER JOIN users ON csr_requests.user_id = users.id
-            WHERE users.username = $1
-            ORDER BY csr_requests.created_at DESC;
-        `;
-
-        // Execute the query
-        const result = await pool.query(query, [username]);
-
-        // Send the data to the frontend
-        res.status(200).json({ success: true, certificates: result.rows });
-    } catch (error) {
-        console.error('Error fetching certificates:', error);
-        res.status(500).json({ success: false, error: 'Failed to fetch certificates' });
-    }
+exports.getAdminDashboard = async (req, res) => {
+  try {
+    const stats = await pool.query(`
+      SELECT
+        (SELECT COUNT(*) FROM csr_requests WHERE status = 'pending') as pending_csrs,
+        (SELECT COUNT(*) FROM issued_certificates WHERE status = 'active') as active_certs,
+        (SELECT COUNT(*) FROM users) as total_users
+    `);
+    res.json({ success: true, data: stats.rows[0] });
+  } catch (error) {
+    console.error("Error fetching admin dashboard:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Error fetching dashboard data" });
+  }
 };
 
-module.exports = { getUserCertificates };
-
+exports.getUserDashboard = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const stats = await pool.query(
+      `
+      SELECT
+        (SELECT COUNT(*) FROM csr_requests WHERE user_id = $1) as total_csrs,
+        (SELECT COUNT(*) FROM issued_certificates WHERE user_id = $1) as total_certs
+    `,
+      [userId]
+    );
+    res.json({ success: true, data: stats.rows[0] });
+  } catch (error) {
+    console.error("Error fetching user dashboard:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Error fetching dashboard data" });
+  }
+};

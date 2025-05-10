@@ -1,23 +1,23 @@
 const express = require("express");
 const {
   generateCSR,
-  signCSR,
   downloadFile,
-  downloadCertificate
+  getPendingCSRs,
+  approveCSR,
+  rejectCSR,
+  getUserCSRs,
+  getIssuedCertificates,
 } = require("../controllers/certificateController");
+const { authenticateToken, authorizeAdmin } = require("../middleware/auth");
 
 const router = express.Router();
 
-// Route to generate CSR
-router.post("/generate-csr", generateCSR);
-
-// Route to sign CSR and issue certificate
-router.post("/sign-csr", signCSR);
-
-// Route to download CSR file
-router.get("/download/csr/:filename", downloadFile);
-
-// Route to download issued certificate
-router.get("/download/certificate/:filename", downloadCertificate);
+router.post("/generate-csr", authenticateToken, generateCSR);
+router.get("/download/csr/:filename", authenticateToken, downloadFile);
+router.get("/csrs", authenticateToken, getUserCSRs);
+router.get("/issued", authenticateToken, getIssuedCertificates);
+router.get("/pending-csrs", authenticateToken, authorizeAdmin, getPendingCSRs);
+router.post("/approve-csr", authenticateToken, authorizeAdmin, approveCSR);
+router.post("/reject-csr", authenticateToken, authorizeAdmin, rejectCSR);
 
 module.exports = router;

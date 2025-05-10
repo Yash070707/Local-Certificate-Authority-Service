@@ -159,6 +159,56 @@ body {
     height: 1rem;
 }
 
+/* Notifications Section */
+.notifications-section {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.notification-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.notification-item {
+    padding: 0.75rem;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.notification-item.approved {
+    background-color: rgba(16, 185, 129, 0.1);
+    border-left: 4px solid var(--success-color);
+}
+
+.notification-item.rejected {
+    background-color: rgba(239, 68, 68, 0.1);
+    border-left: 4px solid var(--danger-color);
+}
+
+.notification-icon {
+    width: 1rem;
+    height: 1rem;
+}
+
+.notification-message {
+    flex: 1;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+}
+
+.notification-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
 /* Stats Section */
 .dashboard-stats {
     display: grid;
@@ -385,6 +435,18 @@ body {
 }
 
 .status-badge.expired {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.status-badge.approved {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-badge.rejected {
     background-color: rgba(239, 68, 68, 0.1);
     color: var(--danger-color);
     border: 1px solid rgba(239, 68, 68, 0.2);
@@ -636,6 +698,12 @@ body {
     box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.2);
 }
 
+.form-error {
+    color: var(--danger-color);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
 .form-actions {
     display: flex;
     justify-content: flex-end;
@@ -703,67 +771,50 @@ body {
     }
 }
 
-/* Style for the download section */
+/* Overriding download-section for consistency */
 .download-section {
-    background-color: #e6f7e6;
-    /* Light green background */
-    border: 1px solid #b3e6b3;
-    /* Green border */
-    border-radius: 8px;
-    padding: 16px;
-    text-align: center;
-    margin-top: px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    /* Full width minus padding of the dialog */
-    margin-left: auto;
-    margin-right: auto;
-    box-sizing: border-box;
-    /* Ensure padding doesn't affect width */
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: left;
+    margin: 1rem 1.5rem;
+    box-shadow: var(--shadow-sm);
 }
 
-/* Title inside the download section */
 .download-title {
-    font-size: 18px;
-    font-weight: bold;
-    color: #2d8659;
-    /* Dark green text */
-    margin-bottom: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--success-color);
+    margin-bottom: 0.75rem;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
-/* Buttons inside the download section */
 .download-buttons {
     display: flex;
-    justify-content: center;
-    gap: 16px;
+    justify-content: flex-start;
+    gap: 0.75rem;
 }
 
 .download-button {
-    background-color: #2d8659;
-    /* Dark green background */
-    color: #fff;
-    /* White text */
-    border: none;
-    border-radius: 4px;
-    padding: 10px 16px;
-    font-size: 14px;
-    font-weight: bold;
+    background-color: transparent;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--success-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.2s ease;
 }
 
 .download-button:hover {
-    background-color: #256d4a;
-    /* Darker green on hover */
+    background-color: rgba(16, 185, 129, 0.1);
 }
 
 .download-icon {
-    color: #2d8659;
-    /* Icon color matching the theme */
-    width: 20px;
-    height: 20px;
+    width: 1rem;
+    height: 1rem;
+    color: var(--success-color);
 }

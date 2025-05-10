@@ -1,24 +1,168 @@
 .admin-dashboard {
     padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.dashboard-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.admin-content {
+    display: grid;
+    gap: 2rem;
+}
+
+.tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.tab-button {
+    padding: 0.5rem 1rem;
+    border: none;
+    background: #f5f5f5;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.tab-button:hover {
+    background: #e0e0e0;
+}
+
+.tab-button.active {
+    background: #2196F3;
+    color: white;
 }
 
 .requests-grid,
 .certificates-grid {
     display: grid;
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
     margin-top: 1rem;
 }
 
 .request-card,
 .certificate-card {
-    padding: 1rem;
-    border: 1px solid #ddd;
+    padding: 1.5rem;
+    border: 1px solid #e0e0e0;
     border-radius: 8px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.request-card:hover,
+.certificate-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.request-info h4,
+.certificate-card h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.request-info p,
+.certificate-card p {
+    margin: 0.25rem 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.request-actions {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
 }
 
 .request-actions button {
-    margin-left: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.request-actions button:first-child {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.request-actions button:first-child:hover {
+    background-color: #3e8e41;
+}
+
+.request-actions button:last-child {
+    background-color: #f44336;
+    color: white;
+}
+
+.request-actions button:last-child:hover {
+    background-color: #d32f2f;
+}
+
+.certificate-card button {
+    padding: 0.5rem 1rem;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+
+.certificate-card button:hover {
+    background-color: #d32f2f;
+}
+
+.empty-state {
+    padding: 2rem;
+    text-align: center;
+    color: #666;
+    grid-column: 1 / -1;
+}
+
+.loading {
+    padding: 2rem;
+    text-align: center;
+    grid-column: 1 / -1;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-top: 0.5rem;
+}
+
+.status-badge.approved {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-badge.pending {
+    background-color: #fff8e1;
+    color: #ff8f00;
+}
+
+.status-badge.rejected {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.status-badge.revoked {
+    background-color: #f5f5f5;
+    color: #616161;
 }

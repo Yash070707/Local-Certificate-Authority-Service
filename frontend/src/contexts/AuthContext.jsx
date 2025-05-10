@@ -1,3 +1,5 @@
+// frontend/src/contexts/AuthContext.jsx
+
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
@@ -12,29 +14,41 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
-    const user = JSON.parse(localStorage.getItem('user'));
+    const userData = localStorage.getItem('user');
     
-    if (token && role) {
-      setAuthState({ token, role, user });
+    try {
+      if (token && userData) {
+        const user = JSON.parse(userData);
+        setAuthState({
+          token,
+          role: role || user?.role || null,
+          user
+        });
+      }
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+      localStorage.clear();
     }
   }, []);
 
-  const login = (token, user, role) => {
-    console.log("Saving token:", token);  // Debugging log
-    console.log("Saving username:", user?.username); // Debugging log
-
-    if (!token || !user?.username) {
-        console.error("Login failed: Missing token or username");
-        return;
+  const login = async (responseData) => {
+    if (!responseData?.token || !responseData?.user?.id) {
+      console.error("Invalid login response:", responseData);
+      throw new Error("Invalid login response from server");
     }
-
-    localStorage.setItem("token", token);
+    
+    const role = responseData.user.role || 'user';
+    
+    localStorage.setItem("token", responseData.token);
+    localStorage.setItem("user", JSON.stringify(responseData.user));
     localStorage.setItem("role", role);
-    localStorage.setItem("username", user.username);
-    localStorage.setItem("user", JSON.stringify(user));
-    setAuthState({ token, role, user });
-};
-
+    
+    setAuthState({
+      token: responseData.token,
+      role: role,
+      user: responseData.user
+    });
+  };
 
   const logout = () => {
     localStorage.clear();
@@ -48,5 +62,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "../../contexts/AuthContext"
-import { generateCSR, downloadFile } from "../../api/certificateApi"
+import { generateCSR, getUserCSRs, getIssuedCertificates, downloadFile } from "../../api/certificateApi"
 import "./UserDashboard.css"
 
 // Icons
@@ -159,10 +159,14 @@ const UserDashboard = () => {
     const { user } = useAuth()
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [successMessage, setSuccessMessage] = useState("")
+    const [formError, setFormError] = useState("")
     const [csrFile, setCsrFile] = useState(null)
-    const [privateKeyFile, setPrivateKeyFile] = useState(null)
     const [searchTerm, setSearchTerm] = useState("")
     const [countries, setCountries] = useState([])
+    const [csrs, setCsrs] = useState([])
+    const [issuedCertificates, setIssuedCertificates] = useState([])
+    const [notifications, setNotifications] = useState([])
+    const [loading, setLoading] = useState(true)
     const [formData, setFormData] = useState({
         domain: "",
         company: "",
@@ -172,50 +176,10 @@ const UserDashboard = () => {
         country: "",
         email: "",
         rootLength: "2048",
-        signatureAlgorithm: "SHA-2",
     })
 
-    // Sample certificates data
-    const [certificates, setCertificates] = useState([
-        {
-            id: "cert-1",
-            commonName: "example.com",
-            organization: "Example Inc",
-            issuedDate: "2023-11-15T10:30:00Z",
-            expiryDate: "2024-11-15T10:30:00Z",
-            status: "Active",
-            type: "OV SSL",
-        },
-        {
-            id: "cert-2",
-            commonName: "api.example.com",
-            organization: "Example Inc",
-            issuedDate: "2023-10-05T14:20:00Z",
-            expiryDate: "2024-10-05T14:20:00Z",
-            status: "Active",
-            type: "OV SSL",
-        },
-        {
-            id: "cert-3",
-            commonName: "secure.example.com",
-            organization: "Example Inc",
-            issuedDate: "2023-09-22T09:15:00Z",
-            expiryDate: "2024-09-22T09:15:00Z",
-            status: "Active",
-            type: "EV SSL",
-        },
-        {
-            id: "cert-4",
-            commonName: "dev.example.com",
-            organization: "Example Inc",
-            issuedDate: "2023-08-17T11:45:00Z",
-            expiryDate: "2023-12-17T11:45:00Z",
-            status: "Expiring Soon",
-            type: "DV SSL",
-        },
-    ])
-
     useEffect(() => {
+        // Fetch countries
         fetch("https://restcountries.com/v3.1/all")
             .then((response) => response.json())
             .then((data) => {
@@ -228,95 +192,97 @@ const UserDashboard = () => {
                 setCountries(countryList)
             })
             .catch((error) => console.error("Error fetching countries:", error))
-    }, []);
+
+        // Initial data fetch
+        const loadData = async () => {
+            try {
+                setLoading(true)
+                const [csrResponse, certResponse] = await Promise.all([
+                    getUserCSRs(),
+                    getIssuedCertificates(),
+                ])
+
+                if (csrResponse.success) {
+                    setCsrs(csrResponse.data)
+                    // Generate notifications for non-pending CSRs
+                    const newNotifications = csrResponse.data
+                        .filter(csr => csr.status !== 'pending')
+                        .map(csr => ({
+                            id: csr.id,
+                            message: `CSR for ${csr.domain} has been ${csr.status}.`,
+                            type: csr.status,
+                            date: csr.updated_at || csr.created_at,
+                        }))
+                    setNotifications(newNotifications)
+                }
+
+                if (certResponse.success) {
+                    setIssuedCertificates(certResponse.data)
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadData()
+
+        // Polling for updates
+        const pollInterval = setInterval(loadData, 300000) // Poll every 5 minutes
+        return () => clearInterval(pollInterval)
+    }, [])
 
     const handleChange = (e) => {
         const { name, value } = e.target
         setFormData({ ...formData, [name]: value })
     }
 
-    const [formError, setFormError] = useState("")
-    const [formSuccess, setFormSuccess] = useState("")
-
     const handleCSRSubmit = async (e) => {
-        e.preventDefault();
-        setFormError("");
-        setFormSuccess("");
+        e.preventDefault()
+        setFormError("")
+        setSuccessMessage("")
 
         try {
-            const username = user?.username || localStorage.getItem("username");
-            const formDataWithUser = { ...formData, username };
-
-            const response = await generateCSR(formDataWithUser);
-
-            if (response.success) {
-                console.log("CSR File:", response.csrFile);
-                console.log("Private Key File:", response.privateKeyFile);
-                setCsrFile(response.csrFile);
-                setPrivateKeyFile(response.privateKeyFile);
-                setFormSuccess("CSR generated successfully! Download your files below.");
-                alert("CSR generated successfully!");
-
-                // Add the new certificate to the list
-                const newCertificate = {
-                    id: `cert-${certificates.length + 1}`,
-                    commonName: formData.domain,
-                    organization: formData.company,
-                    issuedDate: new Date().toISOString(),
-                    expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-                    status: "Pending",
-                    type: "OV SSL",
-                };
-                setCertificates([newCertificate, ...certificates]);
-
-                // Reset the form fields
-                setFormData({
-                    domain: "",
-                    company: "",
-                    division: "",
-                    city: "",
-                    state: "",
-                    country: "",
-                    email: "",
-                    rootLength: "2048",
-                    signatureAlgorithm: "SHA-2",
-                });
-            } else {
-                setFormError("Failed to generate CSR. Please check your inputs and try again.");
+            const username = user?.username
+            if (!username) {
+                throw new Error("User not authenticated")
             }
-        } catch (error) {
-            console.error("CSR submission failed:", error);
-            setFormError("An error occurred during CSR generation. Please try again.");
-        }
-    };
 
-    // Add the download buttons in the dialog
-    {csrFile && (
-            <div className="download-section">
-                <h3 className="download-title">
-                    <ShieldCheck className="download-icon" />
-                    Your CSR has been generated successfully!
-                </h3>
-                <div className="download-buttons">
-                    <button onClick={() => handleDownload(csrFile)} className="download-button">
-                        Download CSR
-                    </button>
-                    <button onClick={() => handleDownload(privateKeyFile)} className="download-button">
-                        Download Private Key
-                    </button>
-                </div>
-            </div>
-        )
+            const formDataWithUser = { ...formData, username }
+            const result = await generateCSR(formDataWithUser)
+
+            if (result.success) {
+                setCsrFile(result.csrFile)
+                setSuccessMessage("CSR generated successfully! Download your file below.")
+                // Refresh CSRs
+                const csrResponse = await getUserCSRs()
+                if (csrResponse.success) {
+                    setCsrs(csrResponse.data)
+                }
+            } else {
+                setFormError(result.message || "Failed to generate CSR. Please check your inputs and try again.")
+            }
+        } catch (err) {
+            console.error("Error generating CSR:", err)
+            setFormError("Something went wrong while generating the CSR.")
+        }
     }
 
-    const handleDownload = (fileName) => {
-        downloadFile(fileName);
+    const handleDownload = async (fileName, type = "csr") => {
+        try {
+            await downloadFile(fileName, type)
+        } catch (error) {
+            console.error(`Error downloading ${type}:`, error)
+            setFormError(`Failed to download ${type} file.`)
+        }
     }
 
     const closeDialog = () => {
         setIsDialogOpen(false)
         setCsrFile(null)
-        setPrivateKeyFile(null)
+        setFormError("")
+        setSuccessMessage("")
         setFormData({
             domain: "",
             company: "",
@@ -326,15 +292,8 @@ const UserDashboard = () => {
             country: "",
             email: "",
             rootLength: "2048",
-            signatureAlgorithm: "SHA-2",
         })
     }
-
-    // Calculate certificate statistics
-    const totalCertificates = certificates.length
-    const activeCertificates = certificates.filter((cert) => cert.status === "Active").length
-    const expiringSoon = certificates.filter((cert) => cert.status === "Expiring Soon").length
-    const expiredCertificates = certificates.filter((cert) => cert.status === "Expired").length
 
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString("en-US", {
@@ -360,18 +319,25 @@ const UserDashboard = () => {
                         Pending
                     </span>
                 )
-            case "expiring soon":
+            case "approved":
                 return (
-                    <span className="status-badge expiring">
-                        <ShieldAlert className="badge-icon" />
-                        Expiring Soon
+                    <span className="status-badge approved">
+                        <ShieldCheck className="badge-icon" />
+                        Approved
                     </span>
                 )
-            case "expired":
+            case "rejected":
+                return (
+                    <span className="status-badge rejected">
+                        <ShieldX className="badge-icon" />
+                        Rejected
+                    </span>
+                )
+            case "revoked":
                 return (
                     <span className="status-badge expired">
                         <ShieldX className="badge-icon" />
-                        Expired
+                        Revoked
                     </span>
                 )
             default:
@@ -379,12 +345,17 @@ const UserDashboard = () => {
         }
     }
 
-    const filteredCertificates = certificates.filter(
+    const filteredCertificates = issuedCertificates.filter(
         (cert) =>
-            cert.commonName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            cert.organization.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            cert.status.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            cert.type.toLowerCase().includes(searchTerm.toLowerCase()),
+            cert.domain.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            cert.status.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    const filteredCSRs = csrs.filter(
+        (csr) =>
+            csr.domain.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            csr.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            csr.status.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     return (
@@ -415,19 +386,61 @@ const UserDashboard = () => {
                     </div>
                     <button className="generate-button" onClick={() => setIsDialogOpen(true)}>
                         <PlusCircle className="button-icon" />
-                        Generate New Certificate
+                        Generate New CSR
                     </button>
+                </div>
+
+                <div className="notifications-section">
+                    <h2>Notifications</h2>
+                    {notifications.length === 0 ? (
+                        <p className="empty-table">No new notifications</p>
+                    ) : (
+                        <div className="notification-list">
+                            {notifications.map((notification) => (
+                                <div
+                                    key={notification.id}
+                                    className={`notification-item ${notification.type}`}
+                                >
+                                    <CheckCircle className="notification-icon" />
+                                    <span className="notification-message">{notification.message}</span>
+                                    <span className="notification-date">{formatDate(notification.date)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="dashboard-stats">
                     <div className="stat-card">
                         <div className="stat-header">
-                            <h3>Total Certificates</h3>
+                            <h3>Total CSRs</h3>
                             <Shield className="stat-icon" />
                         </div>
                         <div className="stat-content">
-                            <div className="stat-value">{totalCertificates}</div>
-                            <p className="stat-description">Across all domains</p>
+                            <div className="stat-value">{csrs.length}</div>
+                            <p className="stat-description">All CSR requests</p>
+                        </div>
+                    </div>
+
+                    <div className="stat-card">
+                        <div className="stat-header">
+                            <h3>Pending CSRs</h3>
+                            <Shield className="stat-icon" />
+                        </div>
+                        <div className="stat-content">
+                            <div className="stat-value">{csrs.filter(csr => csr.status === "pending").length}</div>
+                            <p className="stat-description">Awaiting approval</p>
+                        </div>
+                    </div>
+
+                    <div className="stat-card">
+                        <div className="stat-header">
+                            <h3>Approved CSRs</h3>
+                            <ShieldCheck className="stat-icon active" />
+                        </div>
+                        <div className="stat-content">
+                            <div className="stat-value">{csrs.filter(csr => csr.status === "approved").length}</div>
+                            <p className="stat-description">Certificates issued</p>
                         </div>
                     </div>
 
@@ -437,38 +450,87 @@ const UserDashboard = () => {
                             <ShieldCheck className="stat-icon active" />
                         </div>
                         <div className="stat-content">
-                            <div className="stat-value">{activeCertificates}</div>
-                            <p className="stat-description">{Math.round((activeCertificates / totalCertificates) * 100)}% of total</p>
-                        </div>
-                    </div>
-
-                    <div className="stat-card">
-                        <div className="stat-header">
-                            <h3>Expiring Soon</h3>
-                            <ShieldAlert className="stat-icon expiring" />
-                        </div>
-                        <div className="stat-content">
-                            <div className="stat-value">{expiringSoon}</div>
-                            <p className="stat-description">Expiring in 30 days</p>
-                        </div>
-                    </div>
-
-                    <div className="stat-card">
-                        <div className="stat-header">
-                            <h3>Expired</h3>
-                            <ShieldX className="stat-icon expired" />
-                        </div>
-                        <div className="stat-content">
-                            <div className="stat-value">{expiredCertificates}</div>
-                            <p className="stat-description">Require renewal</p>
+                            <div className="stat-value">{issuedCertificates.filter(cert => cert.status === "active").length}</div>
+                            <p className="stat-description">Valid certificates</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="certificate-table-container">
                     <div className="table-header">
-                        <h2>Certificate Inventory</h2>
-                        <p>View and manage all your SSL/TLS certificates</p>
+                        <h2>CSR Requests</h2>
+                        <p>View and manage your certificate signing requests</p>
+                        <div className="table-actions">
+                            <div className="search-container">
+                                <Search className="search-icon" />
+                                <input
+                                    type="search"
+                                    placeholder="Search CSRs..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="search-input"
+                                />
+                            </div>
+                            <button className="refresh-button" onClick={() => {
+                                setLoading(true)
+                                getUserCSRs().then(res => {
+                                    if (res.success) setCsrs(res.data)
+                                    setLoading(false)
+                                })
+                            }}>
+                                <RefreshCw className="refresh-icon" />
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <table className="certificate-table">
+                        <thead>
+                            <tr>
+                                <th>Domain Name</th>
+                                <th>Organization</th>
+                                <th>Submitted</th>
+                                <th>Status</th>
+                                <th className="actions-column">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={5} className="empty-table">Loading...</td>
+                                </tr>
+                            ) : filteredCSRs.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="empty-table">No CSRs found</td>
+                                </tr>
+                            ) : (
+                                filteredCSRs.map((csr) => (
+                                    <tr key={csr.id}>
+                                        <td className="domain-column">{csr.domain}</td>
+                                        <td>{csr.company}</td>
+                                        <td>{formatDate(csr.created_at)}</td>
+                                        <td>{getStatusBadge(csr.status)}</td>
+                                        <td className="actions-column">
+                                            {csr.status === "pending" && (
+                                                <button
+                                                    className="download-button"
+                                                    onClick={() => handleDownload(`${csr.domain}.csr`)}
+                                                >
+                                                    Download CSR
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="certificate-table-container">
+                    <div className="table-header">
+                        <h2>Issued Certificates</h2>
+                        <p>View and manage your issued certificates</p>
                         <div className="table-actions">
                             <div className="search-container">
                                 <Search className="search-icon" />
@@ -480,7 +542,13 @@ const UserDashboard = () => {
                                     className="search-input"
                                 />
                             </div>
-                            <button className="refresh-button">
+                            <button className="refresh-button" onClick={() => {
+                                setLoading(true)
+                                getIssuedCertificates().then(res => {
+                                    if (res.success) setIssuedCertificates(res.data)
+                                    setLoading(false)
+                                })
+                            }}>
                                 <RefreshCw className="refresh-icon" />
                                 Refresh
                             </button>
@@ -491,7 +559,6 @@ const UserDashboard = () => {
                         <thead>
                             <tr>
                                 <th>Domain Name</th>
-                                <th>Type</th>
                                 <th>Issued Date</th>
                                 <th>Expiry Date</th>
                                 <th>Status</th>
@@ -499,36 +566,30 @@ const UserDashboard = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredCertificates.length === 0 ? (
+                            {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="empty-table">
-                                        No certificates found
-                                    </td>
+                                    <td colSpan={5} className="empty-table">Loading...</td>
+                                </tr>
+                            ) : filteredCertificates.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="empty-table">No certificates found</td>
                                 </tr>
                             ) : (
                                 filteredCertificates.map((certificate) => (
                                     <tr key={certificate.id}>
-                                        <td className="domain-column">
-                                            <div>{certificate.commonName}</div>
-                                            <div className="organization">{certificate.organization}</div>
-                                        </td>
-                                        <td>{certificate.type}</td>
-                                        <td>{formatDate(certificate.issuedDate)}</td>
-                                        <td>{formatDate(certificate.expiryDate)}</td>
+                                        <td className="domain-column">{certificate.domain}</td>
+                                        <td>{formatDate(certificate.issued_at)}</td>
+                                        <td>{formatDate(certificate.valid_till)}</td>
                                         <td>{getStatusBadge(certificate.status)}</td>
                                         <td className="actions-column">
-                                            <div className="dropdown">
-                                                <button className="dropdown-button">
-                                                    <MoreHorizontal className="more-icon" />
+                                            {certificate.status === "active" && (
+                                                <button
+                                                    className="download-button"
+                                                    onClick={() => handleDownload(`${certificate.domain}.crt`, "certificate")}
+                                                >
+                                                    Download Certificate
                                                 </button>
-                                                <div className="dropdown-content">
-                                                    <div className="dropdown-header">Actions</div>
-                                                    <div className="dropdown-divider"></div>
-                                                    <button className="dropdown-item">View Details</button>
-                                                    <button className="dropdown-item">Download Certificate</button>
-                                                    <button className="dropdown-item">Renew Certificate</button>
-                                                </div>
-                                            </div>
+                                            )}
                                         </td>
                                     </tr>
                                 ))
@@ -550,8 +611,6 @@ const UserDashboard = () => {
                                 Fill out the form below to generate a new Certificate Signing Request (CSR).
                             </p>
                         </div>
-
-                        
 
                         <form onSubmit={handleCSRSubmit} className="csr-form">
                             <div className="form-tabs">
@@ -673,37 +732,10 @@ const UserDashboard = () => {
                                             <option value="4096">4096-bit (High Security)</option>
                                         </select>
                                     </div>
-
-                                    <div className="form-group">
-                                        <label htmlFor="signatureAlgorithm">Signature Algorithm:</label>
-                                        <select
-                                            id="signatureAlgorithm"
-                                            name="signatureAlgorithm"
-                                            value={formData.signatureAlgorithm}
-                                            onChange={handleChange}
-                                            required
-                                        >
-                                            <option value="SHA-2">SHA-2</option>
-                                        </select>
-                                    </div>
-                                    {csrFile && (
-                                        <div className="download-section">
-                                            <h3 className="download-title">
-                                                <ShieldCheck className="download-icon" />
-                                                Your CSR has been generated successfully!
-                                            </h3>
-                                            <div className="download-buttons">
-                                                <button onClick={() => handleDownload(csrFile)} className="download-button">
-                                                    Download CSR
-                                                </button>
-                                                <button onClick={() => handleDownload(privateKeyFile)} className="download-button">
-                                                    Download Private Key
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
+
+                            {formError && <div className="form-error">{formError}</div>}
 
                             <div className="form-actions">
                                 <button type="button" className="cancel-button" onClick={closeDialog}>
@@ -714,6 +746,25 @@ const UserDashboard = () => {
                                 </button>
                             </div>
                         </form>
+
+                        {csrFile && (
+                            <div className="download-section">
+                                <h3 className="download-title">
+                                    <ShieldCheck className="download-icon" />
+                                    Your CSR has been generated successfully!
+                                </h3>
+                                <p>CSR File: {csrFile}</p>
+                                <div className="download-buttons">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDownload(csrFile)}
+                                        className="download-button"
+                                    >
+                                        Download CSR
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

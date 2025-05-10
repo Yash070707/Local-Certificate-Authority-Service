@@ -1,14 +1,17 @@
-const jwt = require('jsonwebtoken');
-JWT_SECRET="abhiyashwani2021"
+const jwt = require("jsonwebtoken");
 
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
 
-  if (!token) return res.status(401).json({ error: 'Access denied' });
+  if (!token) {
+    return res.status(401).json({ message: "Access token missing" });
+  }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Invalid token' });
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: "Invalid or expired token" });
+    }
     req.user = user;
     next();
   });
@@ -16,11 +19,15 @@ const authenticateToken = (req, res, next) => {
 
 const authorizeRole = (role) => {
   return (req, res, next) => {
-    if (req.user.role != role) {
-      return res.status(403).json({ error: 'Access denied: Insufficient permissions' });
+    if (!req.user || req.user.role !== role) {
+      return res
+        .status(403)
+        .json({ message: `Access denied: ${role} role required` });
     }
     next();
   };
 };
 
-module.exports = { authenticateToken, authorizeRole };
+const authorizeAdmin = authorizeRole("admin");
+
+module.exports = { authenticateToken, authorizeRole, authorizeAdmin };
