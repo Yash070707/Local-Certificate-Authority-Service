@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const jwt = require("jsonwebtoken"); // Make sure jwt is imported
 const authController = require("../controllers/authController");
+const { authenticateToken, authorizeAdmin } = require("../middleware/auth");
 
 // Routes
 router.post("/signin", authController.signin);
@@ -10,54 +10,30 @@ router.post("/verify-email", authController.verifyEmail);
 router.post("/forgot-password", authController.forgotPassword);
 router.post("/reset-password", authController.resetPassword);
 
-// These admin and user check routes can remain for additional verification
-router.get("/admin", async (req, res) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-
-  if (!token) {
-    return res
-      .status(401)
-      .json({ success: false, message: "Access token missing" });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.role !== "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied: admin role required",
-      });
-    }
-
-    res.json({ success: true, message: "Welcome, Admin!", user: decoded });
-  } catch (error) {
-    console.error("Admin route error:", error);
-    res
-      .status(403)
-      .json({ success: false, message: "Invalid or expired token" });
-  }
+// Admin check route
+router.get("/admin", authenticateToken, authorizeAdmin, (req, res) => {
+  res.json({
+    success: true,
+    message: "Welcome, Admin!",
+    user: {
+      id: req.user.id,
+      username: req.user.username,
+      role: req.user.role,
+    },
+  });
 });
 
-router.get("/user", async (req, res) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-
-  if (!token) {
-    return res
-      .status(401)
-      .json({ success: false, message: "Access token missing" });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({ success: true, message: "Welcome, User!", user: decoded });
-  } catch (error) {
-    console.error("User route error:", error);
-    res
-      .status(403)
-      .json({ success: false, message: "Invalid or expired token" });
-  }
+// User check route
+router.get("/user", authenticateToken, (req, res) => {
+  res.json({
+    success: true,
+    message: "Welcome, User!",
+    user: {
+      id: req.user.id,
+      username: req.user.username,
+      role: req.user.role,
+    },
+  });
 });
 
 module.exports = router;

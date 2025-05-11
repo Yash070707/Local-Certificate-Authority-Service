@@ -1,52 +1,72 @@
 import axios from "axios";
-import { API_BASE_URL, CERTIFICATE_STATUS } from "./apiConfig";
+import { API_BASE_URL, API_TIMEOUT } from "./apiConfig";
 
 const adminApi = axios.create({
   baseURL: `${API_BASE_URL}/certificate`,
-  timeout: 30000,
+  timeout: API_TIMEOUT,
 });
 
-// Admin CSR Operations
 export const getPendingCSRs = async () => {
   try {
     const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
     const response = await adminApi.get("/pending-csrs", {
       headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
   } catch (error) {
     console.error("Error fetching pending CSRs:", error);
-    return { success: false, message: "Failed to fetch pending CSRs" };
+    throw error;
   }
 };
 
-export const approveCSR = async (csrId, validityDays = 365) => {
+export const getAllCSRs = async () => {
   try {
     const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
+    const response = await adminApi.get("/all-csrs", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching all CSRs:", error);
+    throw error;
+  }
+};
+
+export const approveCSR = async (csrId) => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
     const response = await adminApi.post(
-      "/approve-csr",
-      { csr_id: csrId, validity_days: validityDays },
-      { headers: { Authorization: `Bearer ${token}` } }
+      `/approve/${csrId}`,
+      {},
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
     );
     return response.data;
   } catch (error) {
     console.error("Error approving CSR:", error);
-    return { success: false, message: "Failed to approve CSR" };
+    throw error;
   }
 };
 
-export const rejectCSR = async (csrId, reason = "No reason provided") => {
+export const rejectCSR = async (csrId, reason) => {
   try {
     const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
     const response = await adminApi.post(
-      "/reject-csr",
-      { csr_id: csrId, reason },
-      { headers: { Authorization: `Bearer ${token}` } }
+      `/reject/${csrId}`,
+      { reason },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
     );
     return response.data;
   } catch (error) {
     console.error("Error rejecting CSR:", error);
-    return { success: false, message: "Failed to reject CSR" };
+    throw error;
   }
 };
 

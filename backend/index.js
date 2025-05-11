@@ -4,7 +4,7 @@ const bcrypt = require("bcrypt");
 const pool = require("./config/db");
 const authRoutes = require("./routes/auth");
 const certificateRoutes = require("./routes/certificates");
-const dashboardRoutes = require("./routes/dashboard");
+const dashboardRoutes = require("./routes/dashboardRoutes"); // Updated to dashboardRoutes
 require("dotenv").config();
 
 const app = express();
@@ -52,10 +52,10 @@ const createAdminIfNotExists = async () => {
 
     if (adminCheck.rows.length === 0) {
       console.log("Admin user does not exist, creating...");
-      const hashedPassword = await bcrypt.hash("admin@123", 10); // Updated password
+      const hashedPassword = await bcrypt.hash("admin@123", 10);
       const result = await pool.query(
         "INSERT INTO users (username, email, password, role, is_verified) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-        ["admin", "caservice2025@gmail.com", hashedPassword, "admin", true] // Updated email
+        ["admin", "caservice2025@gmail.com", hashedPassword, "admin", true]
       );
       console.log(
         `✅ Admin user created successfully with ID: ${result.rows[0].id}`

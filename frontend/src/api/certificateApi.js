@@ -1,5 +1,5 @@
 import axios from "axios";
-import { API_BASE_URL, API_TIMEOUT, CERTIFICATE_STATUS } from "./apiConfig";
+import { API_BASE_URL, API_TIMEOUT } from "./apiConfig";
 
 const certificateApi = axios.create({
   baseURL: `${API_BASE_URL}/certificate`,
@@ -59,13 +59,19 @@ export const generateCSR = async (formData) => {
 export const getUserCSRs = async () => {
   try {
     const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
     const response = await certificateApi.get("/csrs", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return response.data;
+    if (response.data.success) {
+      return response.data.data;
+    } else {
+      console.error("Error fetching user CSRs:", response.data.message);
+      return [];
+    }
   } catch (error) {
     console.error("Error fetching user CSRs:", error);
-    return { success: false, message: "Failed to fetch CSRs" };
+    return [];
   }
 };
 
@@ -108,13 +114,22 @@ export const downloadFile = async (filename, type = "csr") => {
 export const getIssuedCertificates = async () => {
   try {
     const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
     const response = await certificateApi.get("/issued", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return response.data;
+    if (response.data.success) {
+      return response.data.data;
+    } else {
+      console.error(
+        "Error fetching issued certificates:",
+        response.data.message
+      );
+      return [];
+    }
   } catch (error) {
     console.error("Error fetching issued certificates:", error);
-    return { success: false, message: "Failed to fetch certificates" };
+    return [];
   }
 };
 

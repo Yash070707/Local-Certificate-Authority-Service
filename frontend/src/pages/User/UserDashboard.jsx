@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useEffect, useState } from "react"
 import { useAuth } from "../../contexts/AuthContext"
 import { generateCSR, getUserCSRs, getIssuedCertificates, downloadFile } from "../../api/certificateApi"
+import { fetchUserDashboard } from '../../api/dashboard'
 import "./UserDashboard.css"
 
 // Icons
@@ -167,6 +168,8 @@ const UserDashboard = () => {
     const [issuedCertificates, setIssuedCertificates] = useState([])
     const [notifications, setNotifications] = useState([])
     const [loading, setLoading] = useState(true)
+    const [dashboardStats, setDashboardStats] = useState(null)
+    const [error, setError] = useState('')
     const [formData, setFormData] = useState({
         domain: "",
         company: "",
@@ -197,30 +200,30 @@ const UserDashboard = () => {
         const loadData = async () => {
             try {
                 setLoading(true)
-                const [csrResponse, certResponse] = await Promise.all([
+                const [csrData, certData, statsData] = await Promise.all([
                     getUserCSRs(),
                     getIssuedCertificates(),
+                    fetchUserDashboard(),
                 ])
 
-                if (csrResponse.success) {
-                    setCsrs(csrResponse.data)
-                    // Generate notifications for non-pending CSRs
-                    const newNotifications = csrResponse.data
-                        .filter(csr => csr.status !== 'pending')
-                        .map(csr => ({
-                            id: csr.id,
-                            message: `CSR for ${csr.domain} has been ${csr.status}.`,
-                            type: csr.status,
-                            date: csr.updated_at || csr.created_at,
-                        }))
-                    setNotifications(newNotifications)
-                }
+                setCsrs(csrData.success ? csrData.data : [])
+                setIssuedCertificates(certData.success ? certData.data : [])
+                setDashboardStats(statsData || null)
+                setError('')
 
-                if (certResponse.success) {
-                    setIssuedCertificates(certResponse.data)
-                }
+                // Generate notifications for non-pending CSRs
+                const newNotifications = (csrData.success ? csrData.data : [])
+                    .filter(csr => csr.status !== 'pending')
+                    .map(csr => ({
+                        id: csr.id,
+                        message: `CSR for ${csr.domain} has been ${csr.status}.`,
+                        type: csr.status,
+                        date: csr.updated_at || csr.created_at,
+                    }))
+                setNotifications(newNotifications)
             } catch (error) {
-                console.error("Error fetching data:", error)
+                console.error("Error loading user dashboard:", error)
+                setError("Error loading dashboard data")
             } finally {
                 setLoading(false)
             }
@@ -383,12 +386,23 @@ const UserDashboard = () => {
                                 <span>{successMessage}</span>
                             </div>
                         )}
+                        {error && <div className="error-message">{error}</div>}
                     </div>
                     <button className="generate-button" onClick={() => setIsDialogOpen(true)}>
                         <PlusCircle className="button-icon" />
                         Generate New CSR
                     </button>
                 </div>
+
+                {dashboardStats ? (
+                    <div className="dashboard-stats">
+                        <h2>Dashboard Statistics</h2>
+                        <p>Pending CSRs: {dashboardStats.pending_csrs || 0}</p>
+                        <p>Active Certificates: {dashboardStats.active_certs || 0}</p>
+                    </div>
+                ) : (
+                    <p>Loading dashboard stats...</p>
+                )}
 
                 <div className="notifications-section">
                     <h2>Notifications</h2>

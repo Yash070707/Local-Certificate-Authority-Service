@@ -3,16 +3,13 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
 const { sendOTPEmail } = require("../services/emailService");
-const { Client } = require("pg");
-
-const JWT_SECRET = process.env.JWT_SECRET;
 
 const generateOTP = () => {
   return otpGenerator.generate(6, {
-    upperCaseAlphabets: false, // This disables uppercase letters
-    lowerCaseAlphabets: false, // This disables lowercase letters
-    specialChars: false, // This disables special characters
-    digits: true, // This enables only digits
+    upperCaseAlphabets: false,
+    lowerCaseAlphabets: false,
+    specialChars: false,
+    digits: true,
   });
 };
 
@@ -149,11 +146,11 @@ exports.signin = async (req, res) => {
     console.log("Generating JWT token");
     const token = jwt.sign(
       {
-        id: user.id,
+        userId: user.id,
         username: user.username,
         role: user.role,
       },
-      JWT_SECRET,
+      process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
@@ -224,3 +221,5 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+module.exports = exports;
