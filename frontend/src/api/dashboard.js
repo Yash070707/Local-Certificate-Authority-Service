@@ -9,6 +9,7 @@ const dashboardApi = axios.create({
 export const fetchUserDashboard = async () => {
   try {
     const token = localStorage.getItem("token");
+    if (!token) throw new Error("No authentication token found");
     const response = await dashboardApi.get("/user", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -17,17 +18,20 @@ export const fetchUserDashboard = async () => {
       return response.data.data;
     } else {
       console.error("Error fetching user dashboard:", response.data.message);
-      return null;
+      throw new Error(
+        response.data.message || "Failed to fetch user dashboard"
+      );
     }
   } catch (error) {
     console.error("User Dashboard API Error:", error);
-    return null;
+    throw error;
   }
 };
 
 export const fetchAdminDashboard = async () => {
   try {
     const token = localStorage.getItem("token");
+    if (!token) throw new Error("No authentication token found");
     const response = await dashboardApi.get("/admin", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -36,10 +40,12 @@ export const fetchAdminDashboard = async () => {
       return response.data.data;
     } else {
       console.error("Error fetching admin dashboard:", response.data.message);
-      return null;
+      throw new Error(
+        response.data.message || "Failed to fetch admin dashboard"
+      );
     }
   } catch (error) {
     console.error("Admin Dashboard API Error:", error);
-    return null;
+    throw error;
   }
 };

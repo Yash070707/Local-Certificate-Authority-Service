@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const {
-  getAdminDashboard,
-  getUserDashboard,
-} = require("../controllers/dashboardController");
+  getAdminDashboardStats,
+  getUserDashboardStats,
+} = require("../controllers/certificateController");
 const { authenticateToken, authorizeAdmin } = require("../middleware/auth");
 
-router.get("/admin", authenticateToken, authorizeAdmin, getAdminDashboard);
-router.get("/user", authenticateToken, getUserDashboard);
+router.get("/admin", authenticateToken, authorizeAdmin, getAdminDashboardStats);
+router.get("/user", authenticateToken, getUserDashboardStats);
 
 module.exports = router;

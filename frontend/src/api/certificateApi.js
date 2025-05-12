@@ -7,28 +7,25 @@ const certificateApi = axios.create({
 });
 
 // CSR Operations
-export const submitCSR = async (csrFile) => {
+export const submitCSR = async (csrData) => {
   try {
     const token = localStorage.getItem("token");
     if (!token) throw new Error("No authentication token found.");
 
-    const formData = new FormData();
-    formData.append("csr", csrFile);
-
-    const response = await certificateApi.post("/upload-csr", formData, {
+    const response = await certificateApi.post("/submit", csrData, {
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
+        "Content-Type": "application/json",
       },
     });
 
     return response.data;
   } catch (error) {
     console.error(
-      "Error uploading CSR:",
+      "Error submitting CSR:",
       error.response?.data || error.message
     );
-    return { success: false, message: "CSR upload failed" };
+    return { success: false, message: "CSR submission failed" };
   }
 };
 
@@ -64,33 +61,54 @@ export const getUserCSRs = async () => {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (response.data.success) {
-      return response.data.data;
+      return response.data;
     } else {
       console.error("Error fetching user CSRs:", response.data.message);
-      return [];
+      return { success: false, data: [] };
     }
   } catch (error) {
     console.error("Error fetching user CSRs:", error);
-    return [];
+    return { success: false, data: [] };
   }
 };
 
-// File Download Operations
-export const downloadFile = async (filename, type = "csr") => {
+// Fetch issued certificates
+export const getIssuedCertificates = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
+    const response = await certificateApi.get("/issued", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.data.success) {
+      return response.data;
+    } else {
+      console.error(
+        "Error fetching issued certificates:",
+        response.data.message
+      );
+      return { success: false, data: [] };
+    }
+  } catch (error) {
+    console.error("Error fetching issued certificates:", error);
+    return { success: false, data: [] };
+  }
+};
+
+// Download CSR file
+export const downloadCSR = async (filename) => {
   try {
     if (!filename) throw new Error("Filename is undefined");
 
-    const endpoint =
-      type === "certificate"
-        ? `${API_BASE_URL}/certificate/download/cert/${filename}`
-        : `${API_BASE_URL}/certificate/download/csr/${filename}`;
-
-    const response = await axios.get(endpoint, {
-      responseType: "blob",
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
+    const response = await axios.get(
+      `${API_BASE_URL}/certificate/download/${filename}`,
+      {
+        responseType: "blob",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
+    );
 
     const fileBlob = response.data;
     const fileURL = URL.createObjectURL(fileBlob);
@@ -105,85 +123,38 @@ export const downloadFile = async (filename, type = "csr") => {
       URL.revokeObjectURL(fileURL);
     }, 1000);
   } catch (error) {
-    console.error("Error downloading file:", error);
+    console.error("Error downloading CSR:", error);
     throw error;
   }
 };
 
-// Certificate Operations
-export const getIssuedCertificates = async () => {
+// Download certificate by ID
+export const downloadCertificate = async (certId, domain) => {
   try {
-    const token = localStorage.getItem("token");
-    if (!token) throw new Error("No token found");
-    const response = await certificateApi.get("/issued", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (response.data.success) {
-      return response.data.data;
-    } else {
-      console.error(
-        "Error fetching issued certificates:",
-        response.data.message
-      );
-      return [];
-    }
-  } catch (error) {
-    console.error("Error fetching issued certificates:", error);
-    return [];
-  }
-};
-
-export const getCertificateStatus = async (certificateId) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await certificateApi.get(`/status/${certificateId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error checking certificate status:", error);
-    return { success: false, message: "Failed to check status" };
-  }
-};
-
-export const renewCertificate = async (certificateId) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await certificateApi.post(
-      "/renew",
-      { certificate_id: certificateId },
-      { headers: { Authorization: `Bearer ${token}` } }
+    const response = await axios.get(
+      `${API_BASE_URL}/certificate/download-cert/${certId}`,
+      {
+        responseType: "blob",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
     );
-    return response.data;
+
+    const fileBlob = response.data;
+    const fileURL = URL.createObjectURL(fileBlob);
+    const link = document.createElement("a");
+    link.href = fileURL;
+    link.download = `${domain}_cert.pem`;
+    document.body.appendChild(link);
+    link.click();
+
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(fileURL);
+    }, 1000);
   } catch (error) {
-    console.error("Error renewing certificate:", error);
-    return { success: false, message: "Failed to renew certificate" };
+    console.error("Error downloading certificate:", error);
+    throw error;
   }
-};
-
-// CSR Status Operations
-export const getCSRStatus = async (csrId) => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await certificateApi.get(`/csr/status/${csrId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error checking CSR status:", error);
-    return { success: false, message: "Failed to check CSR status" };
-  }
-};
-
-// Utility functions
-export const getCertificateDownloadLink = (filename) => {
-  return `${API_BASE_URL}/certificate/download/cert/${filename}?token=${localStorage.getItem(
-    "token"
-  )}`;
-};
-
-export const getCSRDownloadLink = (filename) => {
-  return `${API_BASE_URL}/certificate/download/csr/${filename}?token=${localStorage.getItem(
-    "token"
-  )}`;
 };

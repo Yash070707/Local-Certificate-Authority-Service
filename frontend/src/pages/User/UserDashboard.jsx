@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 import { useAuth } from "../../contexts/AuthContext"
-import { generateCSR, getUserCSRs, getIssuedCertificates, downloadFile } from "../../api/certificateApi"
+import { generateCSR, submitCSR, getUserCSRs, getIssuedCertificates, downloadCSR, downloadCertificate } from "../../api/certificateApi"
 import { fetchUserDashboard } from '../../api/dashboard'
 import "./UserDashboard.css"
 
@@ -162,6 +162,7 @@ const UserDashboard = () => {
     const [successMessage, setSuccessMessage] = useState("")
     const [formError, setFormError] = useState("")
     const [csrFile, setCsrFile] = useState(null)
+    const [csrId, setCsrId] = useState(null) // Added to store CSR ID
     const [searchTerm, setSearchTerm] = useState("")
     const [countries, setCountries] = useState([])
     const [csrs, setCsrs] = useState([])
@@ -208,7 +209,12 @@ const UserDashboard = () => {
 
                 setCsrs(csrData.success ? csrData.data : [])
                 setIssuedCertificates(certData.success ? certData.data : [])
-                setDashboardStats(statsData || null)
+                setDashboardStats(statsData || {
+                    total_csrs: 0,
+                    pending_csrs: 0,
+                    approved_csrs: 0,
+                    active_certs: 0
+                })
                 setError('')
 
                 // Generate notifications for non-pending CSRs
@@ -245,6 +251,8 @@ const UserDashboard = () => {
         e.preventDefault()
         setFormError("")
         setSuccessMessage("")
+        setCsrFile(null)
+        setCsrId(null)
 
         try {
             const username = user?.username
@@ -252,12 +260,52 @@ const UserDashboard = () => {
                 throw new Error("User not authenticated")
             }
 
+            // Validate required fields
+            const requiredFields = ['domain', 'company', 'division', 'city', 'state', 'country', 'email', 'rootLength']
+            for (const field of requiredFields) {
+                if (!formData[field]) {
+                    throw new Error(`Missing required field: ${field}`)
+                }
+            }
+
             const formDataWithUser = { ...formData, username }
             const result = await generateCSR(formDataWithUser)
 
             if (result.success) {
-                setCsrFile(result.csrFile)
-                setSuccessMessage("CSR generated successfully! Download your file below.")
+                const { csr, privateKey, csrFile, data } = result
+                setCsrFile(csrFile) // e.g., csr_24.pem
+                setCsrId(data.id) // e.g., 24
+                setSuccessMessage("CSR generated and submitted successfully!")
+
+                // Submit CSR to backend
+                await submitCSR({
+                    ...formData,
+                    csr,
+                    root_length: formData.rootLength,
+                })
+
+                // Download CSR
+                const csrBlob = new Blob([csr], { type: "text/plain" })
+                const csrURL = URL.createObjectURL(csrBlob)
+                const csrLink = document.createElement("a")
+                csrLink.href = csrURL
+                csrLink.download = `csr_${formData.domain}.pem`
+                document.body.appendChild(csrLink)
+                csrLink.click()
+                document.body.removeChild(csrLink)
+                URL.revokeObjectURL(csrURL)
+
+                // Download Private Key
+                const keyBlob = new Blob([privateKey], { type: "text/plain" })
+                const keyURL = URL.createObjectURL(keyBlob)
+                const keyLink = document.createElement("a")
+                keyLink.href = keyURL
+                keyLink.download = `${formData.domain}_key.pem`
+                document.body.appendChild(keyLink)
+                keyLink.click()
+                document.body.removeChild(keyLink)
+                URL.revokeObjectURL(keyURL)
+
                 // Refresh CSRs
                 const csrResponse = await getUserCSRs()
                 if (csrResponse.success) {
@@ -268,13 +316,18 @@ const UserDashboard = () => {
             }
         } catch (err) {
             console.error("Error generating CSR:", err)
-            setFormError("Something went wrong while generating the CSR.")
+            setFormError(err.message || "Something went wrong while generating the CSR.")
         }
     }
 
-    const handleDownload = async (fileName, type = "csr") => {
+    const handleDownload = async (id, domain, type = "csr") => {
         try {
-            await downloadFile(fileName, type)
+            if (type === "csr") {
+                // Use the provided id directly as the filename for CSRs
+                await downloadCSR(`csr_${id}.pem`)
+            } else if (type === "certificate") {
+                await downloadCertificate(id, domain)
+            }
         } catch (error) {
             console.error(`Error downloading ${type}:`, error)
             setFormError(`Failed to download ${type} file.`)
@@ -284,6 +337,7 @@ const UserDashboard = () => {
     const closeDialog = () => {
         setIsDialogOpen(false)
         setCsrFile(null)
+        setCsrId(null)
         setFormError("")
         setSuccessMessage("")
         setFormData({
@@ -387,6 +441,7 @@ const UserDashboard = () => {
                             </div>
                         )}
                         {error && <div className="error-message">{error}</div>}
+                        {formError && <div className="error-message">{formError}</div>}
                     </div>
                     <button className="generate-button" onClick={() => setIsDialogOpen(true)}>
                         <PlusCircle className="button-icon" />
@@ -397,8 +452,46 @@ const UserDashboard = () => {
                 {dashboardStats ? (
                     <div className="dashboard-stats">
                         <h2>Dashboard Statistics</h2>
-                        <p>Pending CSRs: {dashboardStats.pending_csrs || 0}</p>
-                        <p>Active Certificates: {dashboardStats.active_certs || 0}</p>
+                        <div className="stat-card">
+                            <div className="stat-header">
+                                <h3>Total CSRs</h3>
+                                <Shield className="stat-icon" />
+                            </div>
+                            <div className="stat-content">
+                                <div className="stat-value">{dashboardStats.total_csrs}</div>
+                                <p className="stat-description">All CSR requests</p>
+                            </div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-header">
+                                <h3>Pending CSRs</h3>
+                                <Shield className="stat-icon" />
+                            </div>
+                            <div className="stat-content">
+                                <div className="stat-value">{dashboardStats.pending_csrs}</div>
+                                <p className="stat-description">Awaiting approval</p>
+                            </div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-header">
+                                <h3>Approved CSRs</h3>
+                                <ShieldCheck className="stat-icon active" />
+                            </div>
+                            <div className="stat-content">
+                                <div className="stat-value">{dashboardStats.approved_csrs}</div>
+                                <p className="stat-description">Certificates issued</p>
+                            </div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-header">
+                                <h3>Active Certificates</h3>
+                                <ShieldCheck className="stat-icon active" />
+                            </div>
+                            <div className="stat-content">
+                                <div className="stat-value">{dashboardStats.active_certs}</div>
+                                <p className="stat-description">Valid certificates</p>
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <p>Loading dashboard stats...</p>
@@ -422,52 +515,6 @@ const UserDashboard = () => {
                             ))}
                         </div>
                     )}
-                </div>
-
-                <div className="dashboard-stats">
-                    <div className="stat-card">
-                        <div className="stat-header">
-                            <h3>Total CSRs</h3>
-                            <Shield className="stat-icon" />
-                        </div>
-                        <div className="stat-content">
-                            <div className="stat-value">{csrs.length}</div>
-                            <p className="stat-description">All CSR requests</p>
-                        </div>
-                    </div>
-
-                    <div className="stat-card">
-                        <div className="stat-header">
-                            <h3>Pending CSRs</h3>
-                            <Shield className="stat-icon" />
-                        </div>
-                        <div className="stat-content">
-                            <div className="stat-value">{csrs.filter(csr => csr.status === "pending").length}</div>
-                            <p className="stat-description">Awaiting approval</p>
-                        </div>
-                    </div>
-
-                    <div className="stat-card">
-                        <div className="stat-header">
-                            <h3>Approved CSRs</h3>
-                            <ShieldCheck className="stat-icon active" />
-                        </div>
-                        <div className="stat-content">
-                            <div className="stat-value">{csrs.filter(csr => csr.status === "approved").length}</div>
-                            <p className="stat-description">Certificates issued</p>
-                        </div>
-                    </div>
-
-                    <div className="stat-card">
-                        <div className="stat-header">
-                            <h3>Active Certificates</h3>
-                            <ShieldCheck className="stat-icon active" />
-                        </div>
-                        <div className="stat-content">
-                            <div className="stat-value">{issuedCertificates.filter(cert => cert.status === "active").length}</div>
-                            <p className="stat-description">Valid certificates</p>
-                        </div>
-                    </div>
                 </div>
 
                 <div className="certificate-table-container">
@@ -528,7 +575,7 @@ const UserDashboard = () => {
                                             {csr.status === "pending" && (
                                                 <button
                                                     className="download-button"
-                                                    onClick={() => handleDownload(`${csr.domain}.csr`)}
+                                                    onClick={() => handleDownload(csr.id, csr.domain, "csr")}
                                                 >
                                                     Download CSR
                                                 </button>
@@ -599,7 +646,7 @@ const UserDashboard = () => {
                                             {certificate.status === "active" && (
                                                 <button
                                                     className="download-button"
-                                                    onClick={() => handleDownload(`${certificate.domain}.crt`, "certificate")}
+                                                    onClick={() => handleDownload(certificate.id, certificate.domain, "certificate")}
                                                 >
                                                     Download Certificate
                                                 </button>
@@ -673,6 +720,7 @@ const UserDashboard = () => {
                                             id="division"
                                             name="division"
                                             placeholder="IT Department"
+                                            required
                                             value={formData.division}
                                             onChange={handleChange}
                                         />
@@ -771,7 +819,7 @@ const UserDashboard = () => {
                                 <div className="download-buttons">
                                     <button
                                         type="button"
-                                        onClick={() => handleDownload(csrFile)}
+                                        onClick={() => handleDownload(csrId, formData.domain, "csr")}
                                         className="download-button"
                                     >
                                         Download CSR

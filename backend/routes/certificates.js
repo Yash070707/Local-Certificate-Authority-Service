@@ -7,11 +7,17 @@ const {
   getIssuedCertificates,
   approveCSR,
   rejectCSR,
-  submitCSR, // Added to match schema
+  submitCSR,
+  generateCSR,
+  downloadFile,
+  downloadCertificate,
 } = require("../controllers/certificateController");
 const { authenticateToken, authorizeAdmin } = require("../middleware/auth");
 
+router.post("/generate-csr", authenticateToken, generateCSR);
 router.post("/submit", authenticateToken, submitCSR);
+router.get("/download/:filename", authenticateToken, downloadFile);
+router.get("/download-cert/:certId", authenticateToken, downloadCertificate);
 router.get("/pending-csrs", authenticateToken, authorizeAdmin, getPendingCSRs);
 router.get("/all-csrs", authenticateToken, authorizeAdmin, getAllCSRs);
 router.get("/csrs", authenticateToken, getUserCSRs);

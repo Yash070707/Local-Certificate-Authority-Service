@@ -1,7 +1,7 @@
 const pool = require("../config/db");
 const forge = require("node-forge");
-const fs = require("fs"); // Synchronous fs for existsSync
-const fsPromises = require("fs").promises; // Promise-based fs
+const fs = require("fs");
+const fsPromises = require("fs").promises;
 const path = require("path");
 const { exec } = require("child_process");
 const nodemailer = require("nodemailer");
@@ -28,12 +28,29 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Retry utility for email sending
+async function withRetry(fn, retries = 3, delayMs = 1000) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === retries) {
+        throw error;
+      }
+      console.warn(
+        `Email attempt ${attempt} failed: ${error.message}. Retrying in ${delayMs}ms...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
 exports.generateCSR = async (req, res) => {
   try {
     const {
       domain,
       company,
-      division,
+      division = "N/A",
       city,
       state,
       country,
@@ -45,7 +62,6 @@ exports.generateCSR = async (req, res) => {
     if (
       !domain ||
       !company ||
-      !division ||
       !city ||
       !state ||
       !country ||
@@ -58,7 +74,7 @@ exports.generateCSR = async (req, res) => {
         .json({ success: false, message: "Missing required fields" });
     }
 
-    // Fetch user ID from the database
+    // Fetch user ID
     const userCheck = await pool.query(
       "SELECT id FROM users WHERE username = $1",
       [username]
@@ -70,71 +86,100 @@ exports.generateCSR = async (req, res) => {
     }
     const user_id = userCheck.rows[0].id;
 
-    // Define CSR file paths
-    const csrFilePath = path.join(CSR_DIR, `csr_${domain}.pem`);
-    const privateKeyPath = path.join(CSR_DIR, `${domain}-private.key`);
+    // Generate CSR and private key
+    const tempId = Date.now();
+    const csrFilePath = path.join(CSR_DIR, `csr_${tempId}.pem`);
+    const privateKeyPath = path.join(CSR_DIR, `key_${tempId}.pem`);
 
-    // OpenSSL command to generate CSR
-    const opensslCmd = `openssl req -new -newkey rsa:${rootLength} -nodes -keyout "${privateKeyPath}" -out "${csrFilePath}" -subj "/C=${country}/ST=${state}/L=${city}/O=${company}/OU=${division}/CN=${domain}/emailAddress=${email}"`;
+    // Escape shell arguments
+    const escapeShellArg = (arg) => `'${arg.replace(/'/g, "'\\''")}'`;
+    const subj = `/C=${escapeShellArg(country)}/ST=${escapeShellArg(
+      state
+    )}/L=${escapeShellArg(city)}/O=${escapeShellArg(
+      company
+    )}/OU=${escapeShellArg(division)}/CN=${escapeShellArg(
+      domain
+    )}/emailAddress=${escapeShellArg(email)}`;
 
-    exec(opensslCmd, async (error, stdout, stderr) => {
-      if (error) {
-        console.error("Error executing OpenSSL:", stderr);
-        return res.status(500).json({
-          success: false,
-          message: "CSR generation failed",
-          error: stderr,
-        });
-      }
+    const opensslCmd = `openssl req -new -newkey rsa:${rootLength} -nodes -keyout ${escapeShellArg(
+      privateKeyPath
+    )} -out ${escapeShellArg(csrFilePath)} -subj ${subj}`;
 
-      try {
-        // Read CSR
-        const csrContent = await fsPromises.readFile(csrFilePath, "utf8");
-
-        // Delete private key immediately for security
-        if (fs.existsSync(privateKeyPath)) {
-          fs.unlinkSync(privateKeyPath);
-          console.log(`Deleted private key: ${privateKeyPath}`);
+    await new Promise((resolve, reject) => {
+      exec(opensslCmd, (error, stdout, stderr) => {
+        if (error) {
+          console.error("OpenSSL error:", { error, stderr, stdout });
+          reject(
+            new Error(`CSR generation failed: ${stderr || error.message}`)
+          );
         }
+        resolve();
+      });
+    });
 
-        // Insert CSR details into the database
-        const insertQuery = `
-          INSERT INTO csr_requests (user_id, domain, company, division, city, state, country, email, root_length, csr, status)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending') 
-          RETURNING id, domain, status, created_at;
-        `;
-        const values = [
-          user_id,
-          domain,
-          company,
-          division,
-          city,
-          state,
-          country,
-          email,
-          rootLength,
-          csrContent,
-        ];
+    // Read CSR and private key
+    let csrContent, privateKeyContent;
+    try {
+      csrContent = await fsPromises.readFile(csrFilePath, "utf8");
+      privateKeyContent = await fsPromises.readFile(privateKeyPath, "utf8");
+    } catch (readError) {
+      console.error("Error reading files:", readError);
+      throw new Error(
+        `Failed to read CSR or private key: ${readError.message}`
+      );
+    }
 
-        const result = await pool.query(insertQuery, values);
+    // Insert into database
+    const insertQuery = `
+      INSERT INTO csr_requests (user_id, domain, company, division, city, state, country, email, root_length, csr, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
+      RETURNING id, created_at;
+    `;
+    const values = [
+      user_id,
+      domain,
+      company,
+      division,
+      city,
+      state,
+      country,
+      email,
+      rootLength,
+      csrContent,
+    ];
+    const result = await pool.query(insertQuery, values);
+    const csrId = result.rows[0].id;
+    const created_at = result.rows[0].created_at;
 
-        res.status(201).json({
-          success: true,
-          message: "CSR generated successfully",
-          csrFile: `csr_${domain}.pem`,
-          csr: csrContent,
-          data: result.rows[0],
-        });
-      } catch (readError) {
-        console.error("Error reading CSR:", readError);
-        res
-          .status(500)
-          .json({ success: false, message: "Error reading generated CSR" });
-      }
+    // Rename CSR file to match database ID
+    if (tempId !== csrId) {
+      const newCsrFilePath = path.join(CSR_DIR, `csr_${csrId}.pem`);
+      await fsPromises.rename(csrFilePath, newCsrFilePath);
+      console.log(`Renamed ${csrFilePath} to ${newCsrFilePath}`);
+    }
+
+    // Delete private key
+    try {
+      await fsPromises.unlink(privateKeyPath);
+      console.log(`Deleted private key: ${privateKeyPath}`);
+    } catch (unlinkError) {
+      console.warn(`Failed to delete private key: ${unlinkError.message}`);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "CSR generated successfully",
+      csrFile: `csr_${csrId}.pem`,
+      csr: csrContent,
+      privateKey: privateKeyContent,
+      data: { id: csrId, domain, status: "pending", created_at },
     });
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    console.error("Error in generateCSR:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
   }
 };
 
@@ -142,7 +187,7 @@ exports.submitCSR = async (req, res) => {
   const {
     domain,
     company,
-    division,
+    division = "N/A",
     city,
     state,
     country,
@@ -153,7 +198,6 @@ exports.submitCSR = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // Attempt to parse CSR to validate format before saving
     try {
       const csrObj = forge.pki.certificationRequestFromPem(csr);
       if (!csrObj.verify()) {
@@ -188,7 +232,6 @@ exports.submitCSR = async (req, res) => {
       ]
     );
 
-    // Save CSR to file
     const csrFilePath = path.join(CSR_DIR, `csr_${result.rows[0].id}.pem`);
     await fsPromises.writeFile(csrFilePath, csr);
 
@@ -199,21 +242,95 @@ exports.submitCSR = async (req, res) => {
   }
 };
 
-exports.downloadFile = (req, res) => {
-  const filePath = path.join(CSR_DIR, req.params.filename);
+exports.downloadFile = async (req, res) => {
+  const fileName = req.params.filename;
+  const userId = req.user.id;
 
-  if (fs.existsSync(filePath)) {
-    res.download(filePath, (err) => {
-      if (err) {
-        console.error("Error downloading file:", err);
-        res
-          .status(500)
-          .json({ success: false, message: "Error downloading file" });
+  try {
+    // Extract CSR ID from filename
+    const csrIdMatch = fileName.match(/^csr_(\d+)\.pem$/);
+    if (!csrIdMatch) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid CSR filename format" });
+    }
+    const csrId = csrIdMatch[1];
+
+    // Verify user ownership
+    const csrCheck = await pool.query(
+      "SELECT user_id, domain, csr FROM csr_requests WHERE id = $1",
+      [csrId]
+    );
+    if (csrCheck.rowCount === 0 || csrCheck.rows[0].user_id !== userId) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Unauthorized to download this CSR" });
+    }
+
+    // Try serving the file
+    const filePath = path.join(CSR_DIR, fileName);
+    if (fs.existsSync(filePath)) {
+      res.download(filePath, fileName, (err) => {
+        if (err) {
+          console.error("Error downloading file:", err);
+          res
+            .status(500)
+            .json({ success: false, message: "Error downloading file" });
+        }
+      });
+    } else {
+      // Fallback to database content
+      console.log(`File not found: ${filePath}, serving from database`);
+      const { csr, domain } = csrCheck.rows[0];
+      if (!csr) {
+        return res.status(404).json({
+          success: false,
+          message: "CSR content not found in database",
+        });
       }
-    });
-  } else {
-    console.log(`File not found: ${filePath}`);
-    res.status(404).json({ success: false, message: "File not found" });
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${fileName}"`
+      );
+      res.send(csr);
+    }
+  } catch (error) {
+    console.error("Error in downloadFile:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+exports.downloadCertificate = async (req, res) => {
+  const { certId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const cert = await pool.query(
+      `SELECT certificate, domain
+       FROM issued_certificates
+       WHERE id = $1 AND user_id = $2`,
+      [certId, userId]
+    );
+
+    if (cert.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Certificate not found or not authorized",
+      });
+    }
+
+    const { certificate, domain } = cert.rows[0];
+    const fileName = `${domain}_cert.pem`;
+
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.send(certificate);
+  } catch (error) {
+    console.error("Error downloading certificate:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Error downloading certificate" });
   }
 };
 
@@ -223,7 +340,8 @@ exports.getUserCSRs = async (req, res) => {
     const csrs = await pool.query(
       `SELECT c.id, c.domain, c.csr, c.status, c.rejection_reason, c.created_at
        FROM csr_requests c
-       WHERE c.user_id = $1`,
+       WHERE c.user_id = $1
+       ORDER BY c.created_at DESC`,
       [userId]
     );
     res.json({ success: true, data: csrs.rows });
@@ -241,7 +359,8 @@ exports.getIssuedCertificates = async (req, res) => {
     const certificates = await pool.query(
       `SELECT ic.id, ic.domain, ic.certificate, ic.status, ic.issued_at, ic.valid_till
        FROM issued_certificates ic
-       WHERE ic.user_id = $1`,
+       WHERE ic.user_id = $1
+       ORDER BY ic.issued_at DESC`,
       [userId]
     );
     res.json({ success: true, data: certificates.rows });
@@ -286,10 +405,48 @@ exports.getAllCSRs = async (req, res) => {
   }
 };
 
+exports.getUserDashboardStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const stats = await pool.query(
+      `SELECT 
+        (SELECT COUNT(*) FROM csr_requests WHERE user_id = $1) AS total_csrs,
+        (SELECT COUNT(*) FROM csr_requests WHERE user_id = $1 AND status = 'pending') AS pending_csrs,
+        (SELECT COUNT(*) FROM csr_requests WHERE user_id = $1 AND status = 'approved') AS approved_csrs,
+        (SELECT COUNT(*) FROM issued_certificates WHERE user_id = $1 AND status = 'active') AS active_certs`,
+      [userId]
+    );
+    res.json({ success: true, data: stats.rows[0] });
+  } catch (error) {
+    console.error("Error fetching user dashboard stats:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Error fetching user dashboard stats" });
+  }
+};
+
+exports.getAdminDashboardStats = async (req, res) => {
+  try {
+    const stats = await pool.query(
+      `SELECT 
+        (SELECT COUNT(*) FROM csr_requests) AS total_csrs,
+        (SELECT COUNT(*) FROM csr_requests WHERE status = 'pending') AS pending_csrs,
+        (SELECT COUNT(*) FROM csr_requests WHERE status = 'approved') AS approved_csrs,
+        (SELECT COUNT(*) FROM issued_certificates WHERE status = 'active') AS active_certs`
+    );
+    res.json({ success: true, data: stats.rows[0] });
+  } catch (error) {
+    console.error("Error fetching admin dashboard stats:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching admin dashboard stats",
+    });
+  }
+};
+
 exports.approveCSR = async (req, res) => {
   const { csrId } = req.params;
   try {
-    // Fetch CSR details including email and username
     const csrResult = await pool.query(
       `SELECT c.*, u.email, u.username 
        FROM csr_requests c 
@@ -307,7 +464,6 @@ exports.approveCSR = async (req, res) => {
 
     const { id, domain, csr, user_id, email, username } = csrResult.rows[0];
 
-    // Update CSR status to approved
     await pool.query(
       `UPDATE csr_requests SET status = 'approved'
        WHERE id = $1
@@ -315,7 +471,6 @@ exports.approveCSR = async (req, res) => {
       [csrId]
     );
 
-    // Read CA certificate and key
     let caCertPem, caKeyPem;
     try {
       caCertPem = await fsPromises.readFile(CA_CERT_PATH, "utf8");
@@ -325,7 +480,6 @@ exports.approveCSR = async (req, res) => {
       throw new Error("CA certificate or key not found");
     }
 
-    // Parse CA certificate and key
     let caCert, caKey;
     try {
       caCert = forge.pki.certificateFromPem(caCertPem);
@@ -335,7 +489,6 @@ exports.approveCSR = async (req, res) => {
       throw new Error("Invalid CA certificate or key format");
     }
 
-    // Parse CSR
     let csrObj;
     try {
       csrObj = forge.pki.certificationRequestFromPem(csr);
@@ -344,12 +497,10 @@ exports.approveCSR = async (req, res) => {
       throw new Error("Invalid CSR format");
     }
 
-    // Verify CSR
     if (!csrObj.verify()) {
       throw new Error("Invalid CSR signature");
     }
 
-    // Create new certificate
     const cert = forge.pki.createCertificate();
     cert.publicKey = csrObj.publicKey;
     cert.serialNumber = Date.now().toString();
@@ -359,13 +510,9 @@ exports.approveCSR = async (req, res) => {
       cert.validity.notBefore.getFullYear() + 1
     );
 
-    // Set subject from CSR
     cert.setSubject(csrObj.subject.attributes);
-
-    // Set issuer from CA
     cert.setIssuer(caCert.subject.attributes);
 
-    // Set extensions
     cert.setExtensions([
       {
         name: "basicConstraints",
@@ -384,20 +531,16 @@ exports.approveCSR = async (req, res) => {
         name: "subjectAltName",
         altNames: [
           {
-            type: 2, // DNS
+            type: 2,
             value: domain,
           },
         ],
       },
     ]);
 
-    // Sign certificate with CA key
     cert.sign(caKey, forge.md.sha256.create());
-
-    // Convert to PEM
     const certPem = forge.pki.certificateToPem(cert);
 
-    // Insert into issued_certificates
     const issuedCert = await pool.query(
       `INSERT INTO issued_certificates (user_id, csr_id, domain, certificate, status, valid_till)
        VALUES ($1, $2, $3, $4, 'active', $5)
@@ -405,11 +548,9 @@ exports.approveCSR = async (req, res) => {
       [user_id, id, domain, certPem, new Date(cert.validity.notAfter)]
     );
 
-    // Save certificate to file
     const certFilePath = path.join(CERT_DIR, `cert_${id}.pem`);
     await fsPromises.writeFile(certFilePath, certPem);
 
-    // Send email notification
     await sendCertificateApprovalEmail(
       email,
       username,
@@ -437,7 +578,6 @@ exports.rejectCSR = async (req, res) => {
     const { csrId } = req.params;
     const { reason = "No reason provided" } = req.body;
 
-    // Get CSR details
     const csrResult = await pool.query(
       `SELECT c.*, u.email, u.username FROM csr_requests c JOIN users u ON c.user_id = u.id WHERE c.id = $1 AND c.status = 'pending'`,
       [csrId]
@@ -452,13 +592,11 @@ exports.rejectCSR = async (req, res) => {
 
     const csrData = csrResult.rows[0];
 
-    // Update CSR status to rejected
     const rejectedCsr = await pool.query(
       "UPDATE csr_requests SET status = 'rejected', rejection_reason = $1 WHERE id = $2 RETURNING id, domain, status, rejection_reason",
       [reason, csrId]
     );
 
-    // Send rejection email
     await sendCertificateRejectionEmail(
       csrData.email,
       csrData.username,
@@ -498,7 +636,7 @@ async function sendCertificateApprovalEmail(
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    await withRetry(() => transporter.sendMail(mailOptions));
     console.log(`Approval email sent to ${email} for domain ${domain}`);
   } catch (error) {
     console.error("Error sending approval email:", error);
@@ -516,16 +654,14 @@ async function sendCertificateRejectionEmail(email, username, domain, reason) {
         <p>Dear ${username},</p>
         <p>Your CSR for domain <strong>${domain}</strong> has been rejected.</p>
         <p>Reason: ${reason}</p>
-        <p>Please contact the Certificate Authority for further details or submit a new CSR.</p>
+        <p>Please review the rejection reason and submit a new CSR if necessary.</p>
         <p>Best regards,<br>Certificate Authority Team</p>
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    await withRetry(() => transporter.sendMail(mailOptions));
     console.log(`Rejection email sent to ${email} for domain ${domain}`);
   } catch (error) {
     console.error("Error sending rejection email:", error);
   }
 }
-
-module.exports = exports;
