@@ -351,7 +351,7 @@ We welcome contributions! To contribute:
 2. Create a feature branch: `git checkout -b feature/your-feature`.
 3. Commit changes: `git commit -m "Add your feature"`.
 4. Push to the branch: `git push origin feature/your-feature`.
-5. Open a Pull Request.
+5. Open a pull request from your branch to the main branch of this repository.
 
 Please follow the [Code of Conduct](CODE_OF_CONDUCT.md) and include tests for new features.
 
