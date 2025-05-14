@@ -23,6 +23,13 @@
     --radius-sm: 0.25rem;
     --radius-md: 0.375rem;
     --radius-lg: 0.5rem;
+    --palantir-primary: #0A1A2F;
+    --palantir-secondary: #00A3E0;
+    --palantir-accent: #F5F7FA;
+    --palantir-text-dark: #1A2A44;
+    --palantir-text-light: #6B7280;
+    --palantir-background-dark: #0F1C39;
+    --palantir-background-light: #FFFFFF;
 }
 
 * {
@@ -32,7 +39,7 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background-color: var(--background-color);
     color: var(--text-primary);
     line-height: 1.5;
@@ -47,9 +54,13 @@ body {
 
 /* Header */
 .dashboard-header {
-    background-color: var(--card-background);
-    border-bottom: 1px solid var(--border-color);
+    background-color: var(--palantir-background-light);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     padding: 0.75rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .header-content {
@@ -69,17 +80,134 @@ body {
 .logo-icon {
     width: 1.25rem;
     height: 1.25rem;
-    color: var(--primary-color);
+    color: var(--palantir-secondary);
 }
 
 .logo-text {
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--palantir-text-dark);
 }
 
 .user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: var(--palantir-text-dark);
+}
+
+.notifications-button,
+.logout-button {
+    padding: 0.5rem 1rem;
+    background: var(--palantir-secondary);
+    color: var(--palantir-background-light);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.notifications-button:hover,
+.logout-button:hover {
+    background: #0087b8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 163, 224, 0.3);
+}
+
+.bell-icon {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Notifications Dropdown */
+.notifications-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 1rem;
+    background: var(--palantir-background-light);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    width: 320px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 100;
+    padding-bottom: 0.5rem;
+    /* Added for Load More button */
+}
+
+.notifications-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.notifications-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--palantir-text-dark);
+}
+
+.empty-notifications {
+    padding: 1rem;
+    text-align: center;
+    color: var(--palantir-text-light);
+    font-size: 0.875rem;
+}
+
+.notifications-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+}
+
+.notification-item {
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: var(--palantir-background-light);
+    transition: background 0.2s ease;
+}
+
+.notification-item.approved {
+    border-left: 4px solid var(--success-color);
+}
+
+.notification-item.rejected {
+    border-left: 4px solid var(--danger-color);
+}
+
+.notification-item.unknown {
+    border-left: 4px solid var(--text-muted);
+}
+
+.notification-icon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--palantir-secondary);
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-message {
+    font-size: 0.875rem;
+    color: var(--palantir-text-dark);
+}
+
+.notification-date {
+    font-size: 0.75rem;
+    color: var(--palantir-text-light);
+    margin-top: 0.25rem;
+    display: block;
 }
 
 /* Main Content */
@@ -117,16 +245,26 @@ body {
     margin-bottom: 0.5rem;
 }
 
-.success-message {
+.success-message,
+.error-message {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    margin-top: 1rem;
+}
+
+.success-message {
     background-color: rgba(16, 185, 129, 0.1);
     border: 1px solid rgba(16, 185, 129, 0.2);
-    border-radius: var(--radius-md);
     color: var(--success-color);
-    margin-top: 1rem;
+}
+
+.error-message {
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: var(--danger-color);
 }
 
 .success-icon {
@@ -157,56 +295,6 @@ body {
 .button-icon {
     width: 1rem;
     height: 1rem;
-}
-
-/* Notifications Section */
-.notifications-section {
-    background-color: var(--card-background);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 1.5rem;
-    box-shadow: var(--shadow-sm);
-}
-
-.notification-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.notification-item {
-    padding: 0.75rem;
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-sm);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.notification-item.approved {
-    background-color: rgba(16, 185, 129, 0.1);
-    border-left: 4px solid var(--success-color);
-}
-
-.notification-item.rejected {
-    background-color: rgba(239, 68, 68, 0.1);
-    border-left: 4px solid var(--danger-color);
-}
-
-.notification-icon {
-    width: 1rem;
-    height: 1rem;
-}
-
-.notification-message {
-    flex: 1;
-    font-size: 0.875rem;
-    color: var(--text-primary);
-}
-
-.notification-date {
-    font-size: 0.75rem;
-    color: var(--text-muted);
 }
 
 /* Stats Section */
@@ -395,12 +483,6 @@ body {
     font-weight: 500;
 }
 
-.organization {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    margin-top: 0.25rem;
-}
-
 .actions-column {
     text-align: right;
     width: 4rem;
@@ -463,75 +545,27 @@ body {
     color: var(--text-muted);
 }
 
-/* Dropdown */
-.dropdown {
-    position: relative;
-    display: inline-block;
+/* Load More Button */
+.load-more-container {
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
 }
 
-.dropdown-button {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0.25rem;
-    border-radius: var(--radius-sm);
-    transition: background-color 0.2s ease;
-}
-
-.dropdown-button:hover {
-    background-color: var(--border-light);
-}
-
-.more-icon {
-    width: 1rem;
-    height: 1rem;
-    color: var(--text-secondary);
-}
-
-.dropdown-content {
-    display: none;
-    position: absolute;
-    right: 0;
-    min-width: 10rem;
-    background-color: var(--card-background);
+.load-more-button {
+    padding: 0.5rem 1rem;
+    background-color: transparent;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
-    z-index: 10;
-}
-
-.dropdown:hover .dropdown-content {
-    display: block;
-}
-
-.dropdown-header {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.75rem;
-    font-weight: 600;
     color: var(--text-secondary);
-}
-
-.dropdown-divider {
-    height: 1px;
-    background-color: var(--border-color);
-    margin: 0.25rem 0;
-}
-
-.dropdown-item {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 0.5rem 0.75rem;
-    background: none;
-    border: none;
     font-size: 0.875rem;
-    color: var(--text-primary);
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.dropdown-item:hover {
+.load-more-button:hover {
     background-color: var(--border-light);
+    color: var(--text-primary);
 }
 
 /* Dialog */
@@ -769,52 +803,30 @@ body {
     .certificate-table td:nth-child(4) {
         display: none;
     }
+
+    .notifications-dropdown {
+        width: 90%;
+        right: 5%;
+    }
+
+    .load-more-container {
+        padding: 0.5rem;
+    }
 }
 
-/* Overriding download-section for consistency */
-.download-section {
-    background-color: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    border-radius: var(--radius-md);
-    padding: 1rem;
-    text-align: left;
-    margin: 1rem 1.5rem;
-    box-shadow: var(--shadow-sm);
-}
+@media (max-width: 480px) {
+    .user-info {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
 
-.download-title {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--success-color);
-    margin-bottom: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
+    .notifications-button,
+    .logout-button {
+        width: 100%;
+        justify-content: center;
+    }
 
-.download-buttons {
-    display: flex;
-    justify-content: flex-start;
-    gap: 0.75rem;
-}
-
-.download-button {
-    background-color: transparent;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    color: var(--success-color);
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--radius-md);
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.download-button:hover {
-    background-color: rgba(16, 185, 129, 0.1);
-}
-
-.download-icon {
-    width: 1rem;
-    height: 1rem;
-    color: var(--success-color);
+    .load-more-button {
+        width: 100%;
+    }
 }

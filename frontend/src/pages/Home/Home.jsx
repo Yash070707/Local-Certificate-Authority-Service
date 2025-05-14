@@ -5,20 +5,24 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import DownloadIcon from '@mui/icons-material/Download';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import GppGoodIcon from '@mui/icons-material/GppGood';
+import VerifiedIcon from '@mui/icons-material/Verified';
 import './Home.css';
 
 const Home = () => {
   return (
     <div className="home-container">
       {/* Hero Section */}
-      <section className="hero-section">
+      <section className="hero-section" data-aos="fade-up">
         <div className="hero-content">
+          <svg className="hero-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7v10l10 5 10-5V7L12 2z" stroke="#00A3E0" strokeWidth="2" />
+            <path d="M12 12l-4-2m4 2l4-2m-4 2v5" stroke="#00A3E0" strokeWidth="2" />
+          </svg>
           <h1 className="hero-title">
-            <SecurityIcon className="hero-icon" />
             Local Certificate Authority
           </h1>
           <p className="hero-subtitle">
-            Enterprise-grade PKI solution for secure digital certificate management
+            Secure, enterprise-grade PKI for digital certificate management
           </p>
           <div className="cta-buttons">
             <Link to="/login" className="btn primary">
@@ -32,92 +36,86 @@ const Home = () => {
       </section>
 
       {/* Features Section */}
-      <section className="features-section">
-        <h2 className="section-title">Why Choose Our CA Service?</h2>
-        
+      <section className="features-section" data-aos="fade-up">
+        <h2 className="section-title">Core Features</h2>
         <div className="features-grid">
-          {/* User Features */}
-          <div className="feature-card user-features">
-            <div className="feature-header">
-              <AssignmentIcon className="feature-icon" />
-              <h3>User Features</h3>
-            </div>
-            <ul className="feature-list">
-              <li>
-                <GppGoodIcon className="list-icon" />
-                <div>
-                  <h4>Certificate Generation</h4>
-                  <p>Create secure certificate signing requests (CSRs) with automatic validation</p>
-                </div>
-              </li>
-              <li>
-                <DownloadIcon className="list-icon" />
-                <div>
-                  <h4>Request Tracking</h4>
-                  <p>Real-time status monitoring of your certificate requests</p>
-                </div>
-              </li>
-              <li>
-                <SecurityIcon className="list-icon" />
-                <div>
-                  <h4>Secure Downloads</h4>
-                  <p>Download issued certificates with end-to-end encryption</p>
-                </div>
-              </li>
-            </ul>
+          <div className="feature-card" data-aos="zoom-in" data-aos-delay="100">
+            <AssignmentIcon className="feature-icon" />
+            <h3>CSR Generation</h3>
+            <p>Create and validate certificate signing requests with ease, supporting custom attributes.</p>
           </div>
-
-          {/* Admin Features */}
-          <div className="feature-card admin-features">
-            <div className="feature-header">
-              <AdminPanelSettingsIcon className="feature-icon" />
-              <h3>Administration Features</h3>
-            </div>
-            <ul className="feature-list">
-              <li>
-                <GppGoodIcon className="list-icon" />
-                <div>
-                  <h4>CSR Management</h4>
-                  <p>Review and approve certificate requests with detailed audit trails</p>
-                </div>
-              </li>
-              <li>
-                <SecurityIcon className="list-icon" />
-                <div>
-                  <h4>Lifecycle Management</h4>
-                  <p>Full control over certificate issuance, renewal, and expiration</p>
-                </div>
-              </li>
-              <li>
-                <AdminPanelSettingsIcon className="list-icon" />
-                <div>
-                  <h4>Revocation Services</h4>
-                  <p>Immediate certificate revocation with CRL/OCSP support</p>
-                </div>
-              </li>
-            </ul>
+          <div className="feature-card" data-aos="zoom-in" data-aos-delay="200">
+            <DownloadIcon className="feature-icon" />
+            <h3>Certificate Management</h3>
+            <p>Track, download, and manage certificates securely through an intuitive dashboard.</p>
+          </div>
+          <div className="feature-card" data-aos="zoom-in" data-aos-delay="300">
+            <AdminPanelSettingsIcon className="feature-icon" />
+            <h3>Admin Controls</h3>
+            <p>Approve or reject CSRs with detailed logs and real-time notifications.</p>
           </div>
         </div>
       </section>
 
       {/* Trust Section */}
-      <section className="trust-section">
-        <h2 className="section-title">Trusted Security Standards</h2>
+      <section className="trust-section" data-aos="fade-up">
+        <h2 className="section-title">Built on Trusted Standards</h2>
         <div className="standards-grid">
-          <div className="standard-item">
+          <div className="standard-item" data-aos="fade-right">
+            <VerifiedIcon className="standard-icon" />
             <h3>X.509 Compliance</h3>
-            <p>Full compliance with industry-standard certificate formats</p>
+            <p>Adheres to industry-standard certificate formats for universal compatibility.</p>
           </div>
-          <div className="standard-item">
+          <div className="standard-item" data-aos="fade-up">
+            <SecurityIcon className="standard-icon" />
             <h3>SHA-256 Encryption</h3>
-            <p>Military-grade encryption for all cryptographic operations</p>
+            <p>Ensures robust security for all cryptographic operations.</p>
           </div>
-          <div className="standard-item">
-            <h3>Audit Ready</h3>
-            <p>Comprehensive logging and reporting for compliance audits</p>
+          <div className="standard-item" data-aos="fade-left">
+            <GppGoodIcon className="standard-icon" />
+            <h3>Secure Authentication</h3>
+            <p>JWT-based authentication with role-based access control.</p>
           </div>
         </div>
       </section>
+
+      {/* Get Started Section */}
+      <section className="get-started-section" data-aos="fade-up">
+        <h2 className="section-title">Ready to Secure Your Enterprise?</h2>
+        <p className="section-subtitle">
+          Explore our PKI solution or request a demo to see it in action.
+        </p>
+        <div className="get-started-form">
+          <Link to="/signup" className="btn primary">
+            Request Demo
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="footer">
+        <div className="footer-content">
+          <div className="footer-brand">
+            <h3>Local CA</h3>
+            <p>Secure certificate management for the modern enterprise.</p>
+          </div>
+          <div className="footer-links">
+            <h4>Links</h4>
+            <ul>
+              <li><Link to="/login">Login</Link></li>
+              <li><Link to="/signup">Signup</Link></li>
+              <li><a href="https://github.com/imabhi7/Local-Certificate-Authority-Service">GitHub</a></li>
+            </ul>
+          </div>
+          <div className="footer-contact">
+            <h4>Contact</h4>
+            <p>Email: <a href="mailto:caservice2025@gmail.com">caservice2025@gmail.com</a></p>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <p>&copy; 2025 Local Certificate Authority Service. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 };

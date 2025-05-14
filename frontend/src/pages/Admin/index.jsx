@@ -1,59 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { getPendingCSRs, getAllCSRs, approveCSR, rejectCSR } from '../../api/adminApi';
 import { fetchAdminDashboard } from '../../api/dashboard';
 import './Admin.css';
 
-// Icons (from UserDashboard.jsx for consistency)
+// Icons (unchanged for consistency)
 const ShieldCheck = ({ className }) => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={className}
-    >
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        <path d="m9 12 2 2 4-4" />
-    </svg>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="m9 12 2 2 4-4" />
+  </svg>
 );
 
 const Shield = ({ className }) => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={className}
-    >
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
 );
 
 const CheckCircle = ({ className }) => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={className}
-    >
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-        <polyline points="22 4 12 14.01 9 11.01" />
-    </svg>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <polyline points="22 4 12 14.01 9 11.01" />
+  </svg>
 );
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [pendingCSRs, setPendingCSRs] = useState([]);
   const [historyCSRs, setHistoryCSRs] = useState([]);
   const [dashboardStats, setDashboardStats] = useState(null);
@@ -76,6 +78,7 @@ const AdminDashboard = () => {
       }
 
       if (allResponse.success) {
+        // Filter out pending CSRs to show only approved/rejected in history
         const history = allResponse.data.filter(csr => csr.status !== 'pending');
         setHistoryCSRs(history);
       } else {
@@ -135,9 +138,19 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+    } catch (err) {
+      console.error('Error logging out:', err);
+      setError('Error logging out');
+    }
+  };
+
   return (
     <div className="admin-dashboard">
-      <header className="dashboard-header">
+      <header className="dashboard-header" data-aos="fade-down">
         <div className="header-content">
           <div className="logo-container">
             <ShieldCheck className="logo-icon" />
@@ -145,84 +158,71 @@ const AdminDashboard = () => {
           </div>
           <div className="user-info">
             <span>Welcome, {user?.username || 'Admin'}</span>
+            <button className="logout-button" onClick={handleLogout}>
+              Logout
+            </button>
           </div>
         </div>
       </header>
 
       <main className="dashboard-main">
-        <div className="dashboard-welcome">
-          <div className="welcome-text">
-            <h1>Admin Dashboard</h1>
-            <p>Manage all certificate signing requests and certificates</p>
-            {error && (
-              <div className="error-message">
-                <span>{error}</span>
-              </div>
-            )}
-          </div>
+        <div className="dashboard-welcome" data-aos="fade-up">
+          <h1>Admin Dashboard</h1>
+          <p>Manage certificate signing requests and certificates</p>
+          {error && (
+            <div className="error-message">
+              <span>{error}</span>
+            </div>
+          )}
         </div>
 
         {/* Dashboard Stats */}
-        {loading ? (
-          <p>Loading dashboard stats...</p>
-        ) : dashboardStats ? (
-          <div className="dashboard-stats">
-            <h2>System Statistics</h2>
-            <div className="stat-card">
-              <div className="stat-header">
+        <div className="dashboard-stats" data-aos="fade-up" data-aos-delay="100">
+          <h2>System Statistics</h2>
+          {loading ? (
+            <div className="loading">Loading stats...</div>
+          ) : dashboardStats ? (
+            <div className="stats-grid">
+              <div className="stat-card" data-aos="zoom-in" data-aos-delay="200">
+                <Shield className="stat-icon" />
                 <h3>Total CSRs</h3>
-                <Shield className="stat-icon" />
-              </div>
-              <div className="stat-content">
                 <div className="stat-value">{dashboardStats.total_csrs}</div>
-                <p className="stat-description">All CSR requests</p>
+                <p>All CSR requests</p>
               </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-header">
-                <h3>Pending CSRs</h3>
+              <div className="stat-card" data-aos="zoom-in" data-aos-delay="300">
                 <Shield className="stat-icon" />
-              </div>
-              <div className="stat-content">
+                <h3>Pending CSRs</h3>
                 <div className="stat-value">{dashboardStats.pending_csrs}</div>
-                <p className="stat-description">Awaiting approval</p>
+                <p>Awaiting approval</p>
               </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-header">
+              <div className="stat-card" data-aos="zoom-in" data-aos-delay="400">
+                <ShieldCheck className="stat-icon active" />
                 <h3>Approved CSRs</h3>
-                <ShieldCheck className="stat-icon active" />
-              </div>
-              <div className="stat-content">
                 <div className="stat-value">{dashboardStats.approved_csrs}</div>
-                <p className="stat-description">Certificates issued</p>
+                <p>Certificates issued</p>
               </div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-header">
-                <h3>Active Certificates</h3>
+              <div className="stat-card" data-aos="zoom-in" data-aos-delay="500">
                 <ShieldCheck className="stat-icon active" />
-              </div>
-              <div className="stat-content">
+                <h3>Active Certificates</h3>
                 <div className="stat-value">{dashboardStats.active_certs}</div>
-                <p className="stat-description">Valid certificates</p>
+                <p>Valid certificates</p>
               </div>
             </div>
-          </div>
-        ) : (
-          <p>No dashboard stats available</p>
-        )}
+          ) : (
+            <div className="empty-state">No stats available</div>
+          )}
+        </div>
 
         {/* Pending CSRs */}
-        <div className="pending-csrs certificate-table-container">
+        <div className="pending-csrs certificate-table-container" data-aos="fade-up" data-aos-delay="200">
           <div className="table-header">
             <h2>Pending CSRs</h2>
             <p>Review and manage pending certificate signing requests</p>
           </div>
           {loading ? (
-            <p>Loading pending CSRs...</p>
+            <div className="loading">Loading pending CSRs...</div>
           ) : pendingCSRs.length === 0 ? (
-            <p className="empty-table">No pending CSRs</p>
+            <div className="empty-state">No pending CSRs</div>
           ) : (
             <table className="certificate-table">
               <thead>
@@ -240,8 +240,12 @@ const AdminDashboard = () => {
                     <td>{csr.domain}</td>
                     <td>{csr.username}</td>
                     <td>{csr.email}</td>
-                    <td>{csr.status.charAt(0).toUpperCase() + csr.status.slice(1)}</td>
                     <td>
+                      <span className={`status-badge ${csr.status}`}>
+                        {csr.status.charAt(0).toUpperCase() + csr.status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="request-actions">
                       <button
                         className="action-button approve"
                         onClick={() => handleApprove(csr.id)}
@@ -268,15 +272,15 @@ const AdminDashboard = () => {
         </div>
 
         {/* History CSRs */}
-        <div className="history-csrs certificate-table-container">
+        <div className="history-csrs certificate-table-container" data-aos="fade-up" data-aos-delay="300">
           <div className="table-header">
             <h2>History CSRs</h2>
             <p>View all processed certificate signing requests</p>
           </div>
           {loading ? (
-            <p>Loading history CSRs...</p>
+            <div className="loading">Loading history CSRs...</div>
           ) : historyCSRs.length === 0 ? (
-            <p className="empty-table">No history CSRs</p>
+            <div className="empty-state">No history CSRs</div>
           ) : (
             <table className="certificate-table">
               <thead>
@@ -293,12 +297,10 @@ const AdminDashboard = () => {
                     <td>{csr.domain}</td>
                     <td>{csr.username}</td>
                     <td>{csr.email}</td>
-                    <td
-                      style={{
-                        color: csr.status === 'rejected' ? 'red' : 'green',
-                      }}
-                    >
-                      {csr.status.charAt(0).toUpperCase() + csr.status.slice(1)}
+                    <td>
+                      <span className={`status-badge ${csr.status}`}>
+                        {csr.status.charAt(0).toUpperCase() + csr.status.slice(1)}
+                      </span>
                     </td>
                   </tr>
                 ))}

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { jwtDecode } from "jwt-decode"; // Fixed import: use named export
 import { API_BASE_URL, API_TIMEOUT } from "./apiConfig";
 
 const certificateApi = axios.create({
@@ -32,9 +33,17 @@ export const submitCSR = async (csrData) => {
 export const generateCSR = async (formData) => {
   try {
     const token = localStorage.getItem("token");
-    const username = localStorage.getItem("username");
+    if (!token) throw new Error("No authentication token found");
 
-    if (!token || !username) throw new Error("No token or username found");
+    // Decode JWT token to get username
+    let username;
+    try {
+      const decoded = jwtDecode(token);
+      username = decoded.username || decoded.sub || decoded.name; // Adjust based on token structure
+      if (!username) throw new Error("Username not found in token");
+    } catch (err) {
+      throw new Error("Invalid token or username not found");
+    }
 
     const response = await certificateApi.post(
       "/generate-csr",
