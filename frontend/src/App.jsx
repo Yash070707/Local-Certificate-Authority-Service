@@ -6,6 +6,7 @@ import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import Forget from './pages/Auth/Forget';
 import VerifyOTP from './pages/Auth/VerifyOTP';
+import ResetPassword from './pages/Auth/ResetPassword';
 import UserDashboard from './pages/User/UserDashboard';
 import AdminDashboard from './pages/Admin';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -42,6 +43,7 @@ const App = () => {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<Forget />} />
           <Route path="/verify-otp" element={<VerifyOTP />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route element={<ProtectedRoute allowedRoles={['user', 'client']} />}>
             <Route path="/user" element={<UserDashboard />} />
           </Route>

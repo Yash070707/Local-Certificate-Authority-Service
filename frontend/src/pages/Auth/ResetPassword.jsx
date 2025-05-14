@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { register } from '../../api/authApi';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { resetPassword } from '../../api/authApi';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import './Auth.css';
 
-const Signup = () => {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
+const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -15,6 +13,15 @@ const Signup = () => {
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { email, otp } = location.state || {};
+
+  useEffect(() => {
+    if (!email || !otp) {
+      console.warn('No email or OTP provided, redirecting to forgot-password');
+      navigate('/forgot-password');
+    }
+  }, [email, otp, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,24 +42,18 @@ const Signup = () => {
     }
 
     try {
-      console.log(`Submitting signup for username: ${username}, email: ${email}`);
-      const response = await register({ username, email, password });
-      if (response.message) {
-        setSuccess('Registration successful! OTP sent to your email. Redirecting to verify...');
-        console.log(`Navigating to /verify-otp with type: signup, email: ${email}`);
-        setTimeout(() => {
-          navigate('/verify-otp', { state: { email, type: 'signup' } });
-        }, 1000);
+      const payload = { email, otp, newPassword: password };
+      console.log(`Submitting new password for email: ${email}, payload:`, payload);
+      const response = await resetPassword(payload);
+      if (response.success) {
+        setSuccess('Password reset successfully! Redirecting to login...');
+        setTimeout(() => navigate('/login'), 2000);
+      } else {
+        throw new Error(response.message || 'Failed to reset password');
       }
     } catch (err) {
-      console.error('Signup error:', err);
-      if (err.message === 'email_taken') {
-        setError('Email already in use');
-      } else if (err.message === 'username_taken') {
-        setError('Username taken');
-      } else {
-        setError(err.message || 'Error during signup. Please try again.');
-      }
+      console.error('Password reset failed:', err);
+      setError(err.message || 'Error resetting password. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -61,41 +62,19 @@ const Signup = () => {
   return (
     <div className="auth-container">
       <div className="auth-content">
-        <h1 className="auth-title">Create Account</h1>
-        <p className="auth-subtext">Sign up to access the Local Certificate Authority Service.</p>
+        <h1 className="auth-title">Reset Password</h1>
+        <p className="auth-subtext">Enter your new password for {email}.</p>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label>Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              placeholder="Enter your username"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="Enter your email"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Password</label>
+            <label>New Password</label>
             <div className="password-input-container">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="Enter your password"
+                placeholder="Enter new password"
               />
               <button
                 type="button"
@@ -120,11 +99,11 @@ const Signup = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                placeholder="Confirm your password"
+                placeholder="Confirm new password"
               />
               <button
                 type="button"
-                classNamewasser="password-toggle"
+                className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label="toggle password visibility"
               >
@@ -145,19 +124,12 @@ const Signup = () => {
             className="submit-btn"
             disabled={isLoading}
           >
-            {isLoading ? 'Creating...' : 'Create Account'}
+            {isLoading ? 'Resetting...' : 'Reset Password'}
           </button>
         </form>
-
-        <p className="auth-redirect">
-          Already have an account?{' '}
-          <Link to="/login" className="auth-link">
-            Login
-          </Link>
-        </p>
       </div>
     </div>
   );
 };
 
-export default Signup;
+export default ResetPassword;

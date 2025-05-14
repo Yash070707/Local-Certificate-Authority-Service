@@ -1,18 +1,25 @@
-const nodemailer = require('nodemailer');
-require('dotenv').config();
+const nodemailer = require("nodemailer");
+require("dotenv").config();
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD
-  }
+    pass: process.env.EMAIL_PASSWORD,
+  },
 });
 
 const sendOTPEmail = async (email, otp, purpose) => {
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const type = purpose === "signup" ? "signup" : "reset";
+  const verifyUrl = `${baseUrl}/verify-otp?email=${encodeURIComponent(
+    email
+  )}&type=${type}`;
+  console.log(`Sending OTP email to ${email} with verify URL: ${verifyUrl}`);
+
   const subjectMap = {
-    signup: 'Email Verification OTP for Signup',
-    resetPassword: 'Password Reset OTP'
+    signup: "Email Verification OTP for Signup",
+    resetPassword: "Password Reset OTP",
   };
 
   const mailOptions = {
@@ -26,10 +33,16 @@ const sendOTPEmail = async (email, otp, purpose) => {
         </div>
         <div style="background-color: #ffffff; padding: 20px; border-radius: 10px;">
           <h2 style="color: #333333; text-align: center; font-size: 24px; margin-bottom: 10px;">
-            ${purpose === 'signup' ? 'Welcome to Our Service!' : 'Password Reset Request'}
+            ${
+              purpose === "signup"
+                ? "Welcome to Our Service!"
+                : "Password Reset Request"
+            }
           </h2>
           <p style="font-size: 16px; color: #555555; text-align: center; margin-bottom: 20px;">
-            Your ${purpose === 'signup' ? 'email verification' : 'password reset'} OTP is:
+            Your ${
+              purpose === "signup" ? "email verification" : "password reset"
+            } OTP is:
           </p>
           <div style="text-align: center; margin-bottom: 20px;">
             <span style="font-size: 28px; font-weight: bold; color: #4CAF50; background-color: #f0f0f0; padding: 10px 20px; border-radius: 5px; letter-spacing: 3px;">
@@ -43,10 +56,13 @@ const sendOTPEmail = async (email, otp, purpose) => {
             If you did not request this, please ignore this email.
           </p>
           <div style="text-align: center; margin-top: 20px;">
-            <a href="#" style="text-decoration: none; background-color: #4CAF50; color: white; padding: 10px 30px; border-radius: 5px; font-size: 16px;">
+            <a href="${verifyUrl}" style="text-decoration: none; background-color: #4CAF50; color: white; padding: 10px 30px; border-radius: 5px; font-size: 16px;">
               Verify Now
             </a>
           </div>
+          <p style="font-size: 14px; color: #777777; text-align: center; margin-top: 10px;">
+            Or paste this link in your browser: <a href="${verifyUrl}">${verifyUrl}</a>
+          </p>
         </div>
         <div style="text-align: center; margin-top: 20px;">
           <p style="font-size: 12px; color: #999999;">
@@ -54,16 +70,19 @@ const sendOTPEmail = async (email, otp, purpose) => {
           </p>
         </div>
       </div>
-    `
+    `,
   };
-  
 
   try {
     await transporter.sendMail(mailOptions);
+    console.log(`OTP email sent to ${email} with type: ${type}`);
     return true;
   } catch (error) {
-    console.error('Email sending failed:', error);
-    return false;
+    console.error("Email sending failed:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    throw new Error("Failed to send OTP email");
   }
 };
 

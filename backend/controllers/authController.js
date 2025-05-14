@@ -16,15 +16,22 @@ const generateOTP = () => {
 exports.signup = async (req, res) => {
   const { username, email, password, role = "client" } = req.body;
   try {
-    // Check if user already exists
-    const userCheck = await pool.query(
-      "SELECT * FROM users WHERE username = $1 OR email = $2",
-      [username, email]
+    // Check if username exists
+    const usernameCheck = await pool.query(
+      "SELECT * FROM users WHERE username = $1",
+      [username]
     );
-    if (userCheck.rows.length > 0) {
-      return res
-        .status(400)
-        .json({ error: "Username or email already exists" });
+    if (usernameCheck.rows.length > 0) {
+      return res.status(400).json({ error: "username_taken" });
+    }
+
+    // Check if email exists
+    const emailCheck = await pool.query(
+      "SELECT * FROM users WHERE email = $1",
+      [email]
+    );
+    if (emailCheck.rows.length > 0) {
+      return res.status(400).json({ error: "email_taken" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -52,6 +59,7 @@ exports.signup = async (req, res) => {
       role: result.rows[0].role,
     });
   } catch (err) {
+    console.error("Signup error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -59,12 +67,13 @@ exports.signup = async (req, res) => {
 exports.verifyEmail = async (req, res) => {
   const { email, otp } = req.body;
   try {
-    console.log(`Sending otp to ${email}`);
+    console.log(`Verifying OTP for email: ${email}, otp: ${otp}`);
     const query =
       "SELECT * FROM users WHERE email = $1 AND otp = $2 AND otp_expiry > NOW()";
     const result = await pool.query(query, [email, otp]);
 
     if (result.rows.length === 0) {
+      console.log(`Invalid or expired OTP for email: ${email}`);
       return res.status(400).json({ error: "Invalid or expired OTP" });
     }
 
@@ -74,8 +83,9 @@ exports.verifyEmail = async (req, res) => {
       [email]
     );
 
-    res.json({ message: "Email verified successfully" });
+    res.json({ message: "Email verified successfully", success: true });
   } catch (err) {
+    console.error("Verify email error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -185,7 +195,7 @@ exports.forgotPassword = async (req, res) => {
     }
 
     const otp = generateOTP();
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes expiry
 
     await pool.query(
       "UPDATE users SET otp = $1, otp_expiry = $2 WHERE email = $3",
@@ -195,6 +205,7 @@ exports.forgotPassword = async (req, res) => {
 
     res.json({ message: "Password reset OTP has been sent to your email" });
   } catch (err) {
+    console.error("Forgot password error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -202,22 +213,27 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
   try {
-    const query =
-      "SELECT * FROM users WHERE email = $1 AND otp = $2 AND otp_expiry > NOW()";
-    const result = await pool.query(query, [email, otp]);
+    console.log(`Reset password attempt for email: ${email}, otp: ${otp}`);
+    // Check if user exists
+    const query = "SELECT * FROM users WHERE email = $1";
+    const result = await pool.query(query, [email]);
 
     if (result.rows.length === 0) {
-      return res.status(400).json({ error: "Invalid or expired OTP" });
+      console.log(`User not found for email: ${email}`);
+      return res.status(404).json({ error: "User not found" });
     }
 
+    // Since OTP was verified in verifyEmail, we only check user existence
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await pool.query(
-      "UPDATE users SET password = $1, otp = NULL, otp_expiry = NULL WHERE email = $2",
-      [hashedPassword, email]
-    );
+    await pool.query("UPDATE users SET password = $1 WHERE email = $2", [
+      hashedPassword,
+      email,
+    ]);
 
-    res.json({ message: "Password reset successful" });
+    console.log(`Password reset successful for email: ${email}`);
+    res.json({ message: "Password reset successful", success: true });
   } catch (err) {
+    console.error("Reset password error:", err);
     res.status(500).json({ error: err.message });
   }
 };

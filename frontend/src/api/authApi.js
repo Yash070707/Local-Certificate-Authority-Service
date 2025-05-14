@@ -39,7 +39,14 @@ export const register = async ({ username, email, password }) => {
       response: error.response?.data,
       status: error.response?.status,
     });
-    throw new Error(error.response?.data?.message || "Signup failed");
+    const errorMessage = error.response?.data?.error;
+    if (errorMessage === "email_taken") {
+      throw new Error("email_taken");
+    } else if (errorMessage === "username_taken") {
+      throw new Error("username_taken");
+    } else {
+      throw new Error(errorMessage || "Signup failed");
+    }
   }
 };
 
@@ -69,6 +76,29 @@ export const forgotPassword = async ({ email }) => {
     });
     throw new Error(
       error.response?.data?.message || "Forgot password request failed"
+    );
+  }
+};
+
+export const resetPassword = async ({ email, otp, newPassword }) => {
+  try {
+    const response = await authApi.post("/reset-password", {
+      email,
+      otp,
+      newPassword,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Reset password error:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+    throw new Error(
+      error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Password reset failed"
     );
   }
 };

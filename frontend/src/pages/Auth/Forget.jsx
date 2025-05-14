@@ -1,41 +1,50 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { forgotPassword } from "../../api/authApi";
-import "./Password.css";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { forgotPassword } from '../../api/authApi';
+import './Auth.css';
 
 const Forget = () => {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage("");
-    setError("");
+    setError('');
+    setSuccess('');
     setIsLoading(true);
 
     try {
-      await forgotPassword({ email });
-      setMessage("A password reset link has been sent to your email.");
+      console.log(`Submitting forgot password for email: ${email}`);
+      const response = await forgotPassword({ email });
+      if (response.message) {
+        setSuccess('OTP sent to your email. Redirecting to verify...');
+        console.log(`Navigating to /verify-otp with type: reset, email: ${email}`);
+        setTimeout(() => {
+          navigate('/verify-otp', { state: { email, type: 'reset' } });
+        }, 1000);
+      } else {
+        setError(response.message || 'Failed to send OTP. Please try again.');
+      }
     } catch (err) {
-      console.error("Error details:", err);
-      setError("Failed to send reset email. Please try again.");
+      console.error('Forgot password error:', err);
+      setError(err.message || 'Error sending OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="password-container">
-      <div className="password-content">
-        <h2 className="password-title">Reset Your Password</h2>
-        <p className="auth-subtext">Enter your email address and we'll send you a reset link.</p>
+    <div className="auth-container">
+      <div className="auth-content">
+        <h1 className="auth-title">Forgot Password</h1>
+        <p className="auth-subtext">Enter your email to receive an OTP for password reset.</p>
 
-        <form onSubmit={handleSubmit} className="password-form">
+        <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label>Email Address</label>
+            <label>Email</label>
             <input
               type="email"
               value={email}
@@ -45,25 +54,24 @@ const Forget = () => {
             />
           </div>
 
-          {message && <div className="success-message">{message}</div>}
           {error && <div className="error-message">{error}</div>}
+          {success && <div className="success-message">{success}</div>}
 
-          <button 
-            type="submit" 
-            className="submit-btn" 
+          <button
+            type="submit"
+            className="submit-btn"
             disabled={isLoading}
           >
-            {isLoading ? "Sending..." : "Send Reset Link"}
+            {isLoading ? 'Sending...' : 'Send OTP'}
           </button>
         </form>
 
-        <button 
-          onClick={() => navigate("/login")} 
-          className="back-btn"
-          disabled={isLoading}
-        >
-          Back to Login
-        </button>
+        <p className="auth-redirect">
+          Back to{' '}
+          <Link to="/login" className="auth-link">
+            Login
+          </Link>
+        </p>
       </div>
     </div>
   );

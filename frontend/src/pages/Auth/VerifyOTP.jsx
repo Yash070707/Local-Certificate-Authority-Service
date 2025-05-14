@@ -10,13 +10,24 @@ const VerifyOtp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email || '';
+  
+  // Get email and type from state or query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const emailFromQuery = queryParams.get('email') || '';
+  const typeFromQuery = queryParams.get('type') || '';
+  const { email = emailFromQuery, type = typeFromQuery } = location.state || {};
 
   useEffect(() => {
+    console.log('VerifyOTP state:', { email, type, emailFromQuery, typeFromQuery });
     if (!email) {
+      console.warn('No email provided, redirecting to signup');
       navigate('/signup');
     }
-  }, [email, navigate]);
+    if (!['signup', 'reset'].includes(type)) {
+      console.warn(`Invalid type: ${type}, redirecting to signup`);
+      navigate('/signup');
+    }
+  }, [email, type, navigate]);
 
   const handleVerify = async (e) => {
     e.preventDefault();
@@ -31,14 +42,23 @@ const VerifyOtp = () => {
     }
 
     try {
+      console.log(`Verifying OTP for email: ${email}, type: ${type}`);
       const response = await verifyOtp({ email, otp });
       if (response.success) {
-        setSuccess('OTP verified successfully! Redirecting to login...');
-        setTimeout(() => navigate('/login'), 2000);
+        if (type === 'reset') {
+          setSuccess('OTP verified successfully! Redirecting to reset password...');
+          console.log('Redirecting to /reset-password');
+          navigate('/reset-password', { state: { email, otp } });
+        } else if (type === 'signup') {
+          setSuccess('Email verified successfully! Redirecting to login...');
+          console.log('Redirecting to /login');
+          navigate('/login');
+        }
       } else {
         setError(response.message || 'Invalid OTP. Please try again.');
       }
     } catch (err) {
+      console.error('OTP verification failed:', err);
       setError(err.message || 'Error verifying OTP. Please try again.');
     } finally {
       setIsLoading(false);
@@ -49,7 +69,11 @@ const VerifyOtp = () => {
     <div className="auth-container">
       <div className="auth-content">
         <h1 className="auth-title">Verify OTP</h1>
-        <p className="auth-subtext">Enter the 6-digit OTP sent to your email: {email}</p>
+        <p className="auth-subtext">
+          {type === 'reset'
+            ? `Enter the 6-digit OTP sent to ${email} to reset your password.`
+            : `Enter the 6-digit OTP sent to ${email} to verify your email.`}
+        </p>
 
         <form onSubmit={handleVerify} className="auth-form">
           <div className="form-group">
@@ -68,12 +92,12 @@ const VerifyOtp = () => {
           {error && <div className="error-message">{error}</div>}
           {success && <div className="success-message">{success}</div>}
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="submit-btn"
             disabled={isLoading}
           >
-            {isLoading ? "Verifying..." : "Verify OTP"}
+            {isLoading ? 'Verifying...' : 'Verify OTP'}
           </button>
         </form>
       </div>
