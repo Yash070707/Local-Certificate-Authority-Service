@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-//import { useAuth } from '../../contexts/AuthContext';
 import { register } from '../../api/authApi';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
@@ -18,6 +17,7 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [passwordValidations, setPasswordValidations] = useState({
     minLength: false,
     hasUpper: false,
@@ -25,7 +25,6 @@ const Signup = () => {
     hasSpecial: false,
   });
   const navigate = useNavigate();
-  //const { login: contextLogin } = useAuth();
 
   const passwordRequirements = [
     { id: 'minLength', text: 'Minimum 8 characters' },
@@ -47,34 +46,37 @@ const Signup = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
+
     if (credentials.password !== credentials.confirmPassword) {
       setError('Passwords do not match');
+      setIsLoading(false);
       return;
     }
     if (Object.values(passwordValidations).some(valid => !valid)) {
       setError('Password does not meet requirements');
+      setIsLoading(false);
       return;
     }
+
     try {
-      console.log('Attempting registration...');
       const response = await register({
         username: credentials.username,
         email: credentials.email,
         password: credentials.password
       });
-      console.log('Registration successful:', response);
       
-      // Check if we have a response before navigating
       if (response) {
-        console.log('Navigating to verify-otp with email:', credentials.email);
         navigate('/verify-otp', { 
           state: { email: credentials.email },
-          replace: true  // This ensures we replace the current route
+          replace: true
         });
       }
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.response?.data?.error || err.message || 'Registration failed. Username or email might be taken.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -91,6 +93,7 @@ const Signup = () => {
               value={credentials.username}
               onChange={(e) => setCredentials({...credentials, username: e.target.value})}
               required
+              placeholder="Choose a username"
             />
           </div>
 
@@ -101,6 +104,7 @@ const Signup = () => {
               value={credentials.email}
               onChange={(e) => setCredentials({...credentials, email: e.target.value})}
               required
+              placeholder="Enter your email"
             />
           </div>
 
@@ -112,6 +116,7 @@ const Signup = () => {
                 value={credentials.password}
                 onChange={(e) => setCredentials({...credentials, password: e.target.value})}
                 required
+                placeholder="Create a password"
               />
               <button
                 type="button"
@@ -145,6 +150,7 @@ const Signup = () => {
                 value={credentials.confirmPassword}
                 onChange={(e) => setCredentials({...credentials, confirmPassword: e.target.value})}
                 required
+                placeholder="Confirm your password"
               />
               <button
                 type="button"
@@ -163,9 +169,10 @@ const Signup = () => {
             type="submit" 
             className="submit-btn"
             disabled={!Object.values(passwordValidations).every(valid => valid) || 
-                      credentials.password !== credentials.confirmPassword}
+                      credentials.password !== credentials.confirmPassword || 
+                      isLoading}
           >
-            Create Account
+            {isLoading ? "Creating Account..." : "Create Account"}
           </button>
         </form>
 

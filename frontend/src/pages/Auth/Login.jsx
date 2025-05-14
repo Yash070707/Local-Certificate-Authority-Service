@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,12 +13,16 @@ const Login = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { login: contextLogin } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
     try {
       const response = await login({ 
         username: credentials.username, 
@@ -29,8 +31,6 @@ const Login = () => {
       
       if (response && response.token && response.user) {
         contextLogin(response);
-        
-        // Redirect to the intended route (from state) or based on role
         const redirectTo = location.state?.from?.pathname || 
                           (response.user.role === 'admin' ? '/admin' : '/user');
         navigate(redirectTo, { replace: true });
@@ -40,11 +40,9 @@ const Login = () => {
     } catch (error) {
       console.error('Login error:', error);
       setError(error.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const handleClickShowPassword = () => {
-    setShowPassword(!showPassword);
   };
 
   return (
@@ -60,6 +58,7 @@ const Login = () => {
               value={credentials.username}
               onChange={(e) => setCredentials({...credentials, username: e.target.value})}
               required
+              placeholder="Enter your username"
             />
           </div>
 
@@ -71,11 +70,12 @@ const Login = () => {
                 value={credentials.password}
                 onChange={(e) => setCredentials({...credentials, password: e.target.value})}
                 required
+                placeholder="Enter your password"
               />
               <button
                 type="button"
                 className="password-toggle"
-                onClick={handleClickShowPassword}
+                onClick={() => setShowPassword(!showPassword)}
                 aria-label="toggle password visibility"
               >
                 {showPassword ? (
@@ -95,8 +95,12 @@ const Login = () => {
 
           {error && <div className="error-message">{error}</div>}
 
-          <button type="submit" className="submit-btn">
-            Sign In
+          <button 
+            type="submit" 
+            className="submit-btn"
+            disabled={isLoading}
+          >
+            {isLoading ? "Signing In..." : "Sign In"}
           </button>
         </form>
 

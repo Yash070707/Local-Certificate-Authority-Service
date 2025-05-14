@@ -7,6 +7,7 @@ const VerifyOtp = () => {
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const email = location.state?.email || '';
@@ -19,8 +20,13 @@ const VerifyOtp = () => {
 
   const handleVerify = async (e) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
+    setIsLoading(true);
+
     if (!otp) {
       setError('Please enter OTP');
+      setIsLoading(false);
       return;
     }
 
@@ -34,6 +40,8 @@ const VerifyOtp = () => {
       }
     } catch (err) {
       setError(err.message || 'Error verifying OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -41,7 +49,7 @@ const VerifyOtp = () => {
     <div className="auth-container">
       <div className="auth-content">
         <h1 className="auth-title">Verify OTP</h1>
-        <p className="auth-subtext">Enter the OTP sent to your email: {email}</p>
+        <p className="auth-subtext">Enter the 6-digit OTP sent to your email: {email}</p>
 
         <form onSubmit={handleVerify} className="auth-form">
           <div className="form-group">
@@ -60,7 +68,13 @@ const VerifyOtp = () => {
           {error && <div className="error-message">{error}</div>}
           {success && <div className="success-message">{success}</div>}
 
-          <button type="submit" className="submit-btn">Verify OTP</button>
+          <button 
+            type="submit" 
+            className="submit-btn"
+            disabled={isLoading}
+          >
+            {isLoading ? "Verifying..." : "Verify OTP"}
+          </button>
         </form>
       </div>
     </div>
